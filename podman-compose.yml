@@ -1,0 +1,14 @@
+services:
+  edutrace:
+    build:
+      context: .
+      dockerfile: Containerfile
+    container_name: edutrace
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    environment:
+      - EDUTRACE_DATABASE_URL=sqlite:///./data/edutrace.db
+      - EDUTRACE_UPLOAD_DIR=./uploads

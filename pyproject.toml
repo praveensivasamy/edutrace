@@ -1,0 +1,40 @@
+[project]
+name = "edutrace"
+version = "0.1.0"
+description = "Student marks analytics and AI-ready educational trend platform"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.116.0",
+    "uvicorn[standard]>=0.35.0",
+    "sqlalchemy>=2.0.43",
+    "jinja2>=3.1.6",
+    "python-multipart>=0.0.20",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=8.4.1",
+    "ruff>=0.12.9",
+]
+
+[project.scripts]
+edutrace = "app.main:run"
+
+[tool.ruff]
+line-length = 100
+src = ["app", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]

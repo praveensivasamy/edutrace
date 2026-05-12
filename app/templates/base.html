@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}EduTrace{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-900">
+  <header class="bg-slate-950 text-white">
+    <div class="mx-auto max-w-7xl px-6 py-5">
+      <h1 class="text-3xl font-bold">EduTrace</h1>
+      <p class="text-sm text-slate-300">Student marks analytics, trends, and AI-ready ingestion.</p>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-6 py-6">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
