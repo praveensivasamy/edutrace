@@ -133,7 +133,7 @@ uploads/
 - For learning, start local first, then move to Azure Container Apps.
 - Use `EDUTRACE_LOG_LEVEL` to control container log verbosity. Default is `INFO`.
 - Set `EDUTRACE_PRIVACY_ENABLED=false` to disable privacy masking for all users. This hides anonymize/key/reveal/rotate controls and leaves only SQLite DB download and restore in the Privacy tab. If the DB already stores aliases, restore a real-name DB first.
-- Set `EDUTRACE_TARGET_STUDENT_QUERY` locally to choose the private target student used by the My Private Analytics dashboard. Leave it out of committed files.
+- The Svanik Analytics dashboard targets `Svanik P` by default. Set `EDUTRACE_TARGET_STUDENT_QUERY` only if you need to override that locally.
 - Admin Privacy can anonymize `students.student_name` before committing the DB. It downloads the encrypted key file. When loaded with its passphrase, real names are shown on screen only and are not written back to SQLite.
 - If names are anonymized, load the private key before approving future uploads. Incoming real names are mapped back to their aliases before marks are saved, preventing real names from being reintroduced into the DB.
 - To change the key or passphrase, load the current key and use the Privacy panel's rotate action to download a newly encrypted key.

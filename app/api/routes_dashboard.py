@@ -60,9 +60,10 @@ def target_dashboard(
 ):
     rows = MarkRepository(db).list_marks()
     settings = get_settings()
-    rows, student_name = _privacy_safe_target_rows(
+    rows, student_name, analytics_query = _resolve_target_rows(
         rows,
-        settings.target_student_query,
+        target_display_name=settings.target_student_query,
+        target_alias=settings.target_student_alias,
         privacy_enabled=settings.privacy_enabled,
     )
     options = AnalyticsService.analysis_options(rows)
@@ -75,10 +76,10 @@ def target_dashboard(
     )
     filtered_rows = AnalyticsService.filter_rows(rows, selected_exam_terms, selected_subjects)
     comparisons = AnalyticsService.student_vs_top_by_subject(
-        filtered_rows, student_name, top_n=10, exam_order=ordered_exam_terms
+        filtered_rows, analytics_query, top_n=10, exam_order=ordered_exam_terms
     )
     rank_trends = AnalyticsService.student_rank_trend_by_subject(
-        filtered_rows, student_name, exam_order=ordered_exam_terms
+        filtered_rows, analytics_query, exam_order=ordered_exam_terms
     )
     return templates.TemplateResponse(
         request=request,
@@ -151,14 +152,38 @@ def _ordered_tests(
     return submitted + remainder
 
 
+def _resolve_target_rows(
+    rows: list[dict],
+    target_display_name: str,
+    target_alias: str,
+    privacy_enabled: bool = True,
+) -> tuple[list[dict], str, str]:
+    display_label = target_display_name.strip() or TARGET_STUDENT_LABEL
+    candidates = [value.strip() for value in (target_display_name, target_alias) if value.strip()]
+
+    for candidate in candidates:
+        candidate_rows, matched = _privacy_safe_target_rows(
+            rows,
+            candidate,
+            privacy_enabled=privacy_enabled,
+            display_label=display_label,
+        )
+        if matched:
+            return candidate_rows, display_label, candidate
+
+    return _display_rows(rows, privacy_enabled), display_label, display_label
+
+
 def _privacy_safe_target_rows(
     rows: list[dict],
     student_query: str,
     privacy_enabled: bool = True,
-) -> tuple[list[dict], str]:
+    display_label: str | None = None,
+) -> tuple[list[dict], bool]:
     normalized_query = student_query.strip().lower()
+    fallback_label = display_label or student_query.strip() or TARGET_STUDENT_LABEL
     if not normalized_query:
-        return _display_rows(rows, privacy_enabled), TARGET_STUDENT_LABEL
+        return _display_rows(rows, privacy_enabled), False
 
     matched_storage_name = ""
     matched_display_name = ""
@@ -171,11 +196,11 @@ def _privacy_safe_target_rows(
             break
 
     if not matched_storage_name:
-        return _display_rows(rows, privacy_enabled), TARGET_STUDENT_LABEL
+        return _display_rows(rows, privacy_enabled), False
 
-    target_label = matched_display_name or matched_storage_name
+    target_label = matched_display_name or fallback_label
     if not privacy_enabled:
-        return rows, target_label
+        return rows, True
 
     private_rows = []
     for row in rows:
@@ -183,7 +208,7 @@ def _privacy_safe_target_rows(
         if private_row["student_name"] == matched_storage_name:
             private_row["student_name"] = target_label
         private_rows.append(private_row)
-    return private_rows, target_label
+    return private_rows, True
 
 
 def _storage_name_row(row: dict) -> dict:

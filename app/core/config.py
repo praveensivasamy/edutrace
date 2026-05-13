@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     private_dir: Path = Field(default=Path("./private"), alias="EDUTRACE_PRIVATE_DIR")
     log_level: str = Field(default="INFO", alias="EDUTRACE_LOG_LEVEL")
     privacy_enabled: bool = Field(default=False, alias="EDUTRACE_PRIVACY_ENABLED")
-    target_student_query: str = Field(default="", alias="EDUTRACE_TARGET_STUDENT_QUERY")
+    target_student_query: str = Field(default="Svanik P", alias="EDUTRACE_TARGET_STUDENT_QUERY")
+    target_student_alias: str = Field(default="Student 0001", alias="EDUTRACE_TARGET_STUDENT_ALIAS")
 
     model_config = SettingsConfigDict(extra="ignore", populate_by_name=True)
 

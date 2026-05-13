@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from app.api.routes_dashboard import _privacy_safe_target_rows
+from app.api.routes_dashboard import _privacy_safe_target_rows, _resolve_target_rows
 from app.db.base import Base
 from app.db.models import Exam, Mark, ParseJob, Student, Subject, Upload
 from app.db.session import get_db
@@ -49,10 +49,10 @@ def test_target_dashboard_rows_show_revealed_target_name_only_for_target():
         },
     ]
 
-    private_rows, target_label = _privacy_safe_target_rows(rows, "Svanik")
+    private_rows, matched = _privacy_safe_target_rows(rows, "Svanik")
 
     visible_names = {row["student_name"] for row in private_rows}
-    assert target_label == "Svanik P"
+    assert matched is True
     assert visible_names == {"Svanik P", "Student 0002"}
 
 
@@ -70,10 +70,10 @@ def test_target_dashboard_rows_show_alias_when_names_are_not_revealed():
         },
     ]
 
-    private_rows, target_label = _privacy_safe_target_rows(rows, "Student 0001")
+    private_rows, matched = _privacy_safe_target_rows(rows, "Student 0001")
 
     visible_names = {row["student_name"] for row in private_rows}
-    assert target_label == "Student 0001"
+    assert matched is True
     assert visible_names == {"Student 0001", "Student 0002"}
 
 
@@ -91,15 +91,56 @@ def test_target_dashboard_rows_show_all_revealed_names_when_privacy_is_disabled(
         },
     ]
 
-    private_rows, target_label = _privacy_safe_target_rows(
+    private_rows, matched = _privacy_safe_target_rows(
         rows,
         "Svanik",
         privacy_enabled=False,
     )
 
     visible_names = {row["student_name"] for row in private_rows}
-    assert target_label == "Svanik P"
+    assert matched is True
     assert visible_names == {"Svanik P", "Asha R"}
+
+
+def test_target_dashboard_rows_keep_configured_name_when_no_rows_match():
+    rows = [
+        {
+            "student_name": "Asha R",
+            "student_key": "Asha R",
+            "section": "B",
+        }
+    ]
+
+    private_rows, matched = _privacy_safe_target_rows(rows, "Svanik P")
+
+    assert matched is False
+    assert private_rows[0]["student_name"] == "Asha R"
+
+
+def test_resolve_target_rows_falls_back_to_alias_for_anonymized_db():
+    rows = [
+        {
+            "student_name": "Student 0001",
+            "student_key": "Student 0001",
+            "section": "B",
+        },
+        {
+            "student_name": "Student 0002",
+            "student_key": "Student 0002",
+            "section": "B",
+        },
+    ]
+
+    private_rows, display_label, analytics_query = _resolve_target_rows(
+        rows,
+        target_display_name="Svanik P",
+        target_alias="Student 0001",
+        privacy_enabled=False,
+    )
+
+    assert display_label == "Svanik P"
+    assert analytics_query == "Student 0001"
+    assert private_rows[0]["student_name"] == "Student 0001"
 
 
 def test_privacy_page_is_separate_from_admin_page():
