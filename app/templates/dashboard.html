@@ -2,121 +2,205 @@
 {% block title %}EduTrace Dashboard{% endblock %}
 
 {% block content %}
-<section class="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6">
-  {% for label, value in [
-    ('Records', summary.records),
-    ('Students', summary.students),
-    ('Subjects', summary.subjects),
-    ('Average %', summary.average_pct),
-    ('Highest %', summary.highest_pct),
-    ('Lowest %', summary.lowest_pct)
-  ] %}
-  <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-    <div class="text-sm text-slate-500">{{ label }}</div>
-    <div class="mt-2 text-3xl font-bold">{{ value }}</div>
+<section class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+  <div class="lg:col-span-2">
+    <div class="page-heading">
+      <div>
+        <h2>Consolidated Marks Dashboard</h2>
+        <p>Load an Excel/CSV marksheet, review extracted rows, then approve to update analytics.</p>
+      </div>
+      <a href="/marks/export.csv" class="w-fit rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">Export CSV</a>
+    </div>
+
+    <form method="get" action="/" class="mt-5 grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-5">
+      <select name="academic_year" class="rounded-lg border p-2 text-sm">
+        <option value="">All years</option>
+        {% for value in available_filters.academic_years %}
+        <option value="{{ value }}" {% if selected_filters.academic_year == value %}selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+      </select>
+      <select name="class_name" class="rounded-lg border p-2 text-sm">
+        <option value="">All classes</option>
+        {% for value in available_filters.classes %}
+        <option value="{{ value }}" {% if selected_filters.class_name == value %}selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+      </select>
+      <select name="section" class="rounded-lg border p-2 text-sm">
+        <option value="">All sections</option>
+        {% for value in available_filters.sections %}
+        <option value="{{ value }}" {% if selected_filters.section == value %}selected{% endif %}>Section {{ value }}</option>
+        {% endfor %}
+      </select>
+      <select name="exam_term" class="rounded-lg border p-2 text-sm">
+        <option value="">All tests</option>
+        {% for option in available_filters.exam_terms %}
+        <option value="{{ option.value }}" {% if selected_filters.exam_term == option.value %}selected{% endif %}>{{ option.label }}</option>
+        {% endfor %}
+      </select>
+      <button class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">Apply</button>
+    </form>
+
+    <section class="metric-grid mt-5">
+      {% for label, value in [
+        ('Students', summary.students),
+        ('Subjects', summary.subjects),
+        ('Average %', summary.average_pct),
+        ('Highest %', summary.highest_pct),
+        ('Lowest %', summary.lowest_pct)
+      ] %}
+      <div class="metric-card"><span>{{ label }}</span><strong>{{ value }}</strong></div>
+      {% endfor %}
+    </section>
   </div>
-  {% endfor %}
+
+  <div class="panel">
+    <h3 class="font-semibold">Load marksheet</h3>
+    <form hx-post="/uploads/api" hx-encoding="multipart/form-data" hx-target="#upload-result" class="mt-3 space-y-3">
+      <input name="file" type="file" accept=".xlsx,.csv,.txt,.png,.jpg,.jpeg,.webp,.bmp" required class="w-full rounded-lg border p-2 text-sm">
+      <button class="w-full rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white">Upload and parse</button>
+    </form>
+    <div id="upload-result" class="mt-3 rounded-lg bg-slate-100 p-3 text-sm text-slate-700"></div>
+
+    <div class="mt-5 border-t pt-5">
+      <h3 class="font-semibold">Paste CSV</h3>
+      <form action="/uploads/paste" method="post" class="mt-3 space-y-3">
+        <textarea name="csv_text" required rows="6" class="w-full rounded-lg border p-2 font-mono text-xs" placeholder="S.NO,NAMES,SEC,LANG,Eng,Mat,TOTAL,%,RANK&#10;1,Asha,B,T,18,20,38,95,1"></textarea>
+        <button class="w-full rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white">Preview table</button>
+      </form>
+    </div>
+  </div>
 </section>
 
 <section class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-  <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
-    <div class="mb-4 flex items-center justify-between">
-      <h2 class="text-xl font-semibold">Subject Trend</h2>
-      <a href="/marks/export.csv" class="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">Export CSV</a>
-    </div>
-    <canvas id="trendChart" height="110"></canvas>
+  <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+    <h2 class="text-lg font-semibold">Subject Performance</h2>
+    <canvas id="subjectChart" class="mt-4" height="100"></canvas>
   </div>
 
-  <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-    <h2 class="text-xl font-semibold">Add Mark</h2>
-    <form action="/marks/add" method="post" class="mt-4 space-y-3">
-      <div class="grid grid-cols-2 gap-3">
-        <input name="academic_year" value="2026-2027" class="rounded-lg border p-2 text-sm" placeholder="Academic year">
-        <input name="class_name" value="IX" class="rounded-lg border p-2 text-sm" placeholder="Class">
+  <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <h2 class="text-lg font-semibold">Section Summary</h2>
+    <div class="mt-4 space-y-3">
+      {% for section in section_summary %}
+      <div class="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+        <div>
+          <div class="font-semibold">Section {{ section.section }}</div>
+          <div class="text-xs text-slate-500">{{ section.students }} students</div>
+        </div>
+        <div class="text-lg font-semibold">{{ section.average_pct }}%</div>
       </div>
-      <input name="section" value="B" class="w-full rounded-lg border p-2 text-sm" placeholder="Section">
-      <input name="student_name" required class="w-full rounded-lg border p-2 text-sm" placeholder="Student name">
-      <input name="subject_name" required class="w-full rounded-lg border p-2 text-sm" placeholder="Subject">
-      <div class="grid grid-cols-2 gap-3">
-        <input name="exam_term" required class="rounded-lg border p-2 text-sm" placeholder="Exam term">
-        <input name="exam_date" class="rounded-lg border p-2 text-sm" placeholder="YYYY-MM-DD">
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <input name="score" type="number" step="0.01" class="rounded-lg border p-2 text-sm" placeholder="Score">
-        <input name="max_marks" required type="number" step="0.01" class="rounded-lg border p-2 text-sm" placeholder="Max marks">
-      </div>
-      <input name="remarks" class="w-full rounded-lg border p-2 text-sm" placeholder="Remarks">
-      <button class="w-full rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white">Save</button>
-    </form>
-
-    <div class="mt-6 border-t pt-5">
-      <h3 class="font-semibold">Upload screenshot</h3>
-      <form hx-post="/uploads/api" hx-encoding="multipart/form-data" hx-target="#upload-result" class="mt-3 space-y-3">
-        <input name="file" type="file" required class="w-full rounded-lg border p-2 text-sm">
-        <button class="w-full rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white">Upload</button>
-      </form>
-      <pre id="upload-result" class="mt-3 overflow-auto rounded-lg bg-slate-100 p-3 text-xs text-slate-700"></pre>
+      {% else %}
+      <div class="text-sm text-slate-500">No approved marks yet.</div>
+      {% endfor %}
     </div>
   </div>
 </section>
 
-<section class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-  <h2 class="text-xl font-semibold">Marks Data</h2>
-  <div class="mt-4 overflow-auto rounded-xl border border-slate-200">
-    <table class="min-w-full border-collapse text-sm">
-      <thead class="bg-slate-50">
-        <tr>
-          <th class="border-b p-3 text-left">Student</th>
-          <th class="border-b p-3 text-left">Subject</th>
-          <th class="border-b p-3 text-left">Term</th>
-          <th class="border-b p-3 text-left">Date</th>
-          <th class="border-b p-3 text-right">Score</th>
-          <th class="border-b p-3 text-right">Max</th>
-          <th class="border-b p-3 text-right">%</th>
-          <th class="border-b p-3 text-left">Remarks</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in rows %}
-        <tr class="hover:bg-slate-50">
-          <td class="border-b p-3">{{ row.student_name }}</td>
-          <td class="border-b p-3">{{ row.subject_name }}</td>
-          <td class="border-b p-3">{{ row.exam_term }}</td>
-          <td class="border-b p-3">{{ row.exam_date or '' }}</td>
-          <td class="border-b p-3 text-right">{{ row.score }}</td>
-          <td class="border-b p-3 text-right">{{ row.max_marks }}</td>
-          <td class="border-b p-3 text-right">{{ row.percentage }}</td>
-          <td class="border-b p-3">{{ row.remarks or '' }}</td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="8" class="p-6 text-center text-slate-500">No marks yet. Add one using the form.</td>
-        </tr>
+<section class="mt-6 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+  <h2 class="text-lg font-semibold">Subject Toppers by Test</h2>
+  <div class="mt-4 space-y-5">
+    {% for group in subject_toppers %}
+    <div class="rounded-lg border border-slate-200">
+      <div class="border-b bg-slate-50 px-4 py-3">
+        <h3 class="font-semibold">{{ group.exam_display_name }}</h3>
+      </div>
+      <div class="divide-y divide-slate-200">
+        {% for topper in group.subjects %}
+        <div class="grid grid-cols-1 gap-3 px-4 py-3 lg:grid-cols-[160px_120px_80px_1fr] lg:items-center">
+          <div class="font-medium">{{ topper.subject_display_name }}</div>
+          <div class="text-sm text-slate-700">{{ topper.score }} / {{ topper.max_marks }}</div>
+          <div class="text-sm font-semibold text-slate-900">{{ topper.percentage }}%</div>
+          <div class="flex flex-wrap gap-2">
+            {% for student in topper.students %}
+            <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800 ring-1 ring-blue-200">{{ student }}</span>
+            {% endfor %}
+          </div>
+        </div>
         {% endfor %}
-      </tbody>
-    </table>
+      </div>
+    </div>
+    {% else %}
+    <div class="rounded-lg border border-slate-200 p-6 text-center text-slate-500">No approved marks yet.</div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+  <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <h2 class="text-lg font-semibold">Top Students</h2>
+    <div class="mt-4 overflow-auto rounded-lg border border-slate-200">
+      <table class="min-w-full border-collapse text-sm">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="border-b p-3 text-left">Rank</th>
+            <th class="border-b p-3 text-left">Student</th>
+            <th class="border-b p-3 text-left">Section</th>
+            <th class="border-b p-3 text-right">Total</th>
+            <th class="border-b p-3 text-right">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in student_rankings %}
+          <tr class="hover:bg-slate-50">
+            <td class="border-b p-3">{{ loop.index }}</td>
+            <td class="border-b p-3 font-medium">{{ student.student_name }}</td>
+            <td class="border-b p-3">{{ student.section }}</td>
+            <td class="border-b p-3 text-right">{{ student.score }} / {{ student.max_marks }}</td>
+            <td class="border-b p-3 text-right">{{ student.percentage }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="p-6 text-center text-slate-500">No approved marks yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <h2 class="text-lg font-semibold">Subject Details</h2>
+    <div class="mt-4 overflow-auto rounded-lg border border-slate-200">
+      <table class="min-w-full border-collapse text-sm">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="border-b p-3 text-left">Subject</th>
+            <th class="border-b p-3 text-right">Average</th>
+            <th class="border-b p-3 text-right">Highest</th>
+            <th class="border-b p-3 text-right">Lowest</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for subject in subject_summary %}
+          <tr class="hover:bg-slate-50">
+            <td class="border-b p-3 font-medium">{{ subject.subject_display_name }}</td>
+            <td class="border-b p-3 text-right">{{ subject.average_pct }}</td>
+            <td class="border-b p-3 text-right">{{ subject.highest_pct }}</td>
+            <td class="border-b p-3 text-right">{{ subject.lowest_pct }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="p-6 text-center text-slate-500">No approved marks yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </section>
 
 <script>
-  const trend = {{ trend | tojson }};
-  const ctx = document.getElementById('trendChart');
-  new Chart(ctx, {
+  const subjectSummary = {{ subject_summary | tojson }};
+  const subjectChart = document.getElementById('subjectChart');
+  new Chart(subjectChart, {
     type: 'bar',
     data: {
-      labels: trend.map(item => item.label),
+      labels: subjectSummary.map(item => item.subject_display_name),
       datasets: [
         {
           label: 'Average %',
-          data: trend.map(item => item.average_pct),
-        },
-        {
-          label: 'Highest %',
-          data: trend.map(item => item.highest_pct),
+          data: subjectSummary.map(item => item.average_pct),
+          backgroundColor: '#2563eb'
         },
         {
           label: 'Lowest %',
-          data: trend.map(item => item.lowest_pct),
+          data: subjectSummary.map(item => item.lowest_pct),
+          backgroundColor: '#f59e0b'
         }
       ]
     },

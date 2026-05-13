@@ -1,0 +1,81 @@
+body {
+  background: hsl(var(--b2));
+}
+
+.page-heading {
+  align-items: flex-end;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.page-heading h2 {
+  font-size: 1.65rem;
+  font-weight: 750;
+}
+
+.page-heading p {
+  color: rgb(71 85 105);
+  margin-top: .25rem;
+}
+
+.metric-grid {
+  display: grid;
+  gap: .75rem;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.metric-card,
+.panel {
+  background: hsl(var(--b1));
+  border: 1px solid hsl(var(--b3));
+  border-radius: .75rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 6%);
+}
+
+.metric-card {
+  padding: 1rem;
+}
+
+.metric-card span {
+  color: rgb(100 116 139);
+  display: block;
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.metric-card strong {
+  display: block;
+  font-size: 1.5rem;
+  margin-top: .35rem;
+}
+
+.panel {
+  padding: 1.25rem;
+}
+
+.panel h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.nav-tab {
+  border-radius: .65rem;
+  color: white;
+  font-weight: 700;
+  padding: .5rem .75rem;
+}
+
+.nav-tab:hover {
+  background: rgb(255 255 255 / 18%);
+}
+
+.nav-tab-active {
+  background: white;
+  color: rgb(15 23 42);
+}
+
+.nav-tab-idle {
+  background: rgb(255 255 255 / 10%);
+}

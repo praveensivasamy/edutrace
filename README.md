@@ -15,7 +15,9 @@ It is designed for local PyCharm development first, with a clean path to Podman/
 - Chart.js dashboard chart
 - CSV export endpoint
 - Manual mark entry form
-- Upload placeholder for future OCR/AI parsing
+- Upload review flow for Excel/CSV/text marks files
+- Screenshot upload staging before OCR/AI parsing is configured
+- Human approval before extracted marks are committed to SQLite
 - Podman-compatible `Containerfile`
 - `uv` dependency management
 - `project-goal.md` architecture blueprint
@@ -68,6 +70,16 @@ With the app running:
 uv run python scripts/smoke_test.py
 ```
 
+## Upload and review flow
+
+Uploaded Excel/CSV/text files are parsed into candidate marks and saved in a parse job. Open the returned review link, correct the rows if needed, and approve them before they are written to the marks table.
+
+You can also paste CSV content directly on the dashboard and preview it as an editable table before approval.
+
+Consolidated marksheets with one student per row and subject scores as columns are expanded into individual mark records for dashboard analytics.
+
+Screenshot/image uploads are stored and tracked, but automatic visual number extraction is intentionally left behind a small parser boundary until an OCR/AI provider is configured.
+
 ## Seed sample data
 
 The app automatically creates tables on startup. You can seed sample data from the dashboard or run:
@@ -119,3 +131,12 @@ uploads/
 - Uploaded files are stored in `uploads/`.
 - For Azure deployment without mounted storage, data can be lost on container restart/redeploy.
 - For learning, start local first, then move to Azure Container Apps.
+- Use `EDUTRACE_LOG_LEVEL` to control container log verbosity. Default is `INFO`.
+
+## Deferred refactors
+
+- Add pagination to large mark tables, especially Approved Marks.
+- Split analytics helpers if dashboard logic grows further.
+- Add a small Chart.js helper file for shared chart defaults.
+- Add more HTMX partial refreshes for dashboard filters where useful.
+- Review Azure persistent volume setup before production use.

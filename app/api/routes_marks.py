@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Form
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Form, HTTPException
 from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.orm import Session
 
@@ -11,12 +13,12 @@ router = APIRouter(prefix="/marks", tags=["marks"])
 
 
 @router.get("/api")
-def list_marks(db: Session = Depends(get_db)):
+def list_marks(db: Annotated[Session, Depends(get_db)]):
     return MarkRepository(db).list_marks()
 
 
 @router.get("/export.csv")
-def export_marks_csv(db: Session = Depends(get_db)):
+def export_marks_csv(db: Annotated[Session, Depends(get_db)]):
     rows = MarkRepository(db).list_marks()
     csv_text = CsvService.rows_to_csv(rows)
     return Response(
@@ -28,18 +30,18 @@ def export_marks_csv(db: Session = Depends(get_db)):
 
 @router.post("/add")
 def add_mark(
-    academic_year: str = Form("2026-2027"),
-    class_name: str = Form("IX"),
-    section: str = Form("B"),
-    exam_term: str = Form(...),
-    exam_date: str = Form(""),
-    subject_name: str = Form(...),
-    student_name: str = Form(...),
-    score: float | None = Form(None),
-    max_marks: float = Form(...),
-    absent_flag: str = Form("N"),
-    remarks: str = Form(""),
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
+    academic_year: Annotated[str, Form()] = "2026-2027",
+    class_name: Annotated[str, Form()] = "IX",
+    section: Annotated[str, Form()] = "B",
+    exam_term: Annotated[str, Form()] = "",
+    exam_date: Annotated[str, Form()] = "",
+    subject_name: Annotated[str, Form()] = "",
+    student_name: Annotated[str, Form()] = "",
+    score: Annotated[float | None, Form()] = None,
+    max_marks: Annotated[float, Form()] = 100,
+    absent_flag: Annotated[str, Form()] = "N",
+    remarks: Annotated[str, Form()] = "",
 ):
     data = MarkCreate(
         academic_year=academic_year,
@@ -56,3 +58,24 @@ def add_mark(
     )
     MarkRepository(db).upsert_mark(data)
     return RedirectResponse(url="/", status_code=303)
+
+
+@router.post("/{mark_id}/edit")
+def edit_mark(
+    mark_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    score: Annotated[float | None, Form()] = None,
+    max_marks: Annotated[float, Form()] = 100,
+    absent_flag: Annotated[str, Form()] = "N",
+    remarks: Annotated[str, Form()] = "",
+):
+    mark = MarkRepository(db).update_mark_numbers(
+        mark_id=mark_id,
+        score=score,
+        max_marks=max_marks,
+        absent_flag=absent_flag,
+        remarks=remarks or None,
+    )
+    if not mark:
+        raise HTTPException(status_code=404, detail="Mark not found")
+    return RedirectResponse(url="/dashboards/approved-marks", status_code=303)

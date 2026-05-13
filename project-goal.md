@@ -64,6 +64,8 @@ Marksheet screenshot / CSV
         ↓
 Upload / import layer
         ↓
+Parse job with extracted candidate rows
+        ↓
 Review and correction screen
         ↓
 SQLite database
@@ -72,6 +74,12 @@ FastAPI APIs
         ↓
 Dashboard and trend views
 ```
+
+Current implementation:
+
+- CSV/text uploads are parsed into candidate rows.
+- Screenshot/image uploads are staged as parse jobs for future OCR/AI extraction.
+- Candidate rows are committed to SQLite only after human approval.
 
 ---
 

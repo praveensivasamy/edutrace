@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -8,6 +9,7 @@ class Settings(BaseSettings):
     app_name: str = "EduTrace"
     database_url: str = Field(default="sqlite:///./data/edutrace.db", alias="EDUTRACE_DATABASE_URL")
     upload_dir: Path = Field(default=Path("./uploads"), alias="EDUTRACE_UPLOAD_DIR")
+    log_level: str = Field(default="INFO", alias="EDUTRACE_LOG_LEVEL")
 
     model_config = SettingsConfigDict(extra="ignore", populate_by_name=True)
 

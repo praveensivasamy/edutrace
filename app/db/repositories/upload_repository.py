@@ -17,3 +17,28 @@ class UploadRepository:
         self.db.commit()
         self.db.refresh(upload)
         return upload
+
+    def get_upload(self, upload_id: int) -> Upload | None:
+        return self.db.get(Upload, upload_id)
+
+    def latest_parse_job(self, upload_id: int) -> ParseJob | None:
+        return (
+            self.db.query(ParseJob)
+            .filter(ParseJob.upload_id == upload_id)
+            .order_by(ParseJob.id.desc())
+            .first()
+        )
+
+    def update_parse_job(
+        self,
+        parse_job: ParseJob,
+        parser_status: str,
+        extracted_json: str | None,
+        error_message: str | None,
+    ) -> ParseJob:
+        parse_job.parser_status = parser_status
+        parse_job.extracted_json = extracted_json
+        parse_job.error_message = error_message
+        self.db.commit()
+        self.db.refresh(parse_job)
+        return parse_job

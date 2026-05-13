@@ -1,0 +1,55 @@
+<section id="exam-dates-panel" class="panel mt-6">
+  <h3>Exam Dates</h3>
+  <p class="mt-1 text-sm text-slate-600">Review the default held/start date per academic year and test type. Saving here updates staged upload rows before approval and approved exams where they already exist.</p>
+  <div class="mt-4 overflow-auto rounded-lg border border-slate-200">
+    <table class="min-w-full border-collapse text-sm">
+      <thead class="bg-slate-50">
+        <tr>
+          <th class="border-b p-3 text-left">Academic Year</th>
+          <th class="border-b p-3 text-left">Test Type</th>
+          <th class="border-b p-3 text-left">Default Held / Start Date</th>
+          <th class="border-b p-3 text-left">Source</th>
+          <th class="border-b p-3 text-right">Rows</th>
+          <th class="border-b p-3 text-left">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for exam in exam_dates %}
+        {% set form_id = 'exam-date-' ~ loop.index %}
+        <tr class="hover:bg-slate-50">
+          <td class="border-b p-3">{{ exam.academic_year }}</td>
+          <td class="border-b p-3 font-medium">{{ exam.exam_term }}</td>
+          <td class="border-b p-3">
+            <input form="{{ form_id }}" name="exam_date" value="{{ exam.exam_date }}" placeholder="06.04.26" class="input input-bordered input-sm w-44">
+          </td>
+          <td class="border-b p-3">
+            <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">{{ exam.source }}</span>
+            {% if exam.upload_name %}
+            <div class="mt-1 text-xs text-slate-500">{{ exam.upload_name }}</div>
+            {% endif %}
+          </td>
+          <td class="border-b p-3 text-right">{{ exam.candidate_count or exam.exam_count }}</td>
+          <td class="border-b p-3">
+            <form
+              id="{{ form_id }}"
+              action="/admin/exam-dates"
+              method="post"
+              hx-post="/admin/exam-dates"
+              hx-target="#exam-dates-panel"
+              hx-swap="outerHTML"
+            >
+              <input type="hidden" name="academic_year" value="{{ exam.academic_year }}">
+              <input type="hidden" name="exam_term" value="{{ exam.exam_term }}">
+            </form>
+            <button form="{{ form_id }}" class="btn btn-primary btn-sm">Approve date</button>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="p-6 text-center text-slate-500">No approved or staged exam rows yet. Upload and parse a marksheet to populate defaults.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>

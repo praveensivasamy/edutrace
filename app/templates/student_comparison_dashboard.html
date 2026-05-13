@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+{% block title %}Svanik Analysis{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+  <div>
+    <h2>{{ matched_name or student_name }} Analytical Dashboard</h2>
+    <p>Filter by one or more tests and subjects to compare rank, score, and top-10 position.</p>
+  </div>
+  <a href="/" class="w-fit rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold">Consolidated dashboard</a>
+</section>
+
+<section class="panel mt-5">
+  <form id="svanik-filter-form" method="get" action="/dashboards/svanik" class="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_1fr_auto]">
+    <div>
+      <label class="text-sm font-semibold text-slate-700">Tests and comparison order</label>
+      <p class="mt-1 text-xs text-slate-500">Search and select only the tests you want to compare, then drag the selected tests into the desired trend order.</p>
+      <div class="mt-2 grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <input id="test-search" class="w-full rounded-lg border p-2 text-sm" placeholder="Search tests">
+          <div id="available-test-list" class="mt-3 max-h-56 space-y-2 overflow-auto">
+            {% for value in options.exam_terms %}
+            <label class="available-test flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm ring-1 ring-slate-200" data-test-name="{{ value }}">
+              <input type="checkbox" value="{{ value }}" {% if not selected_exam_terms or value in selected_exam_terms %}checked{% endif %}>
+              <span>{{ options.exam_labels.get(value, value) }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="text-sm font-semibold text-slate-700">Selected order</div>
+            <button type="button" id="clear-tests" class="rounded border px-2 py-1 text-xs">Clear selected</button>
+          </div>
+          <div id="test-order-list" class="mt-3 max-h-56 space-y-2 overflow-auto">
+            {% for value in ordered_exam_terms %}
+            <div draggable="true" class="test-order-item flex cursor-grab items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 text-sm ring-1 ring-slate-200" data-test-name="{{ value }}">
+              <span class="flex items-center gap-2">
+                <span class="text-slate-400">☰</span>
+                <span class="font-medium">{{ options.exam_labels.get(value, value) }}</span>
+              </span>
+              <button type="button" class="rounded border px-2 py-1 text-xs" data-remove-test>Remove</button>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div id="test-order-hidden"></div>
+    </div>
+    <div>
+      <label class="text-sm font-semibold text-slate-700">Subjects</label>
+      <select name="subject" multiple size="8" class="mt-2 w-full rounded-lg border p-2 text-sm">
+        {% for value in options.subjects %}
+        <option value="{{ value }}" {% if value in selected_subjects %}selected{% endif %}>{{ options.subject_labels.get(value, value) }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex items-end gap-2">
+      <button class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">Apply</button>
+      <a href="/dashboards/svanik" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold">Reset</a>
+    </div>
+  </form>
+</section>
+
+{% if not matched_name %}
+<section class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-900">
+  No approved marks found for {{ student_name }} in the selected filters.
+</section>
+{% endif %}
+
+<section class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+  <div class="panel">
+    <h3>Score vs Top 10 Average</h3>
+    <canvas id="comparisonChart" class="mt-4" height="120"></canvas>
+  </div>
+  <div class="panel">
+    <h3>Trend Analysis Summary</h3>
+    <p class="mt-1 text-sm text-slate-600">Each subject compares Svanik's rank from one selected test to the next using the order above.</p>
+    <div class="mt-4 space-y-3">
+      {% for trend in rank_trends %}
+      {% set latest = trend.points[-1] %}
+      <div class="rounded-lg border border-slate-200 p-3">
+        <div class="flex items-center justify-between gap-3">
+          <div class="font-semibold">{{ trend.subject_display_name }}</div>
+          <div class="text-sm">
+            {% if latest.movement == 'improved' %}
+            <span class="rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-700">Better by {{ latest.rank_delta }} rank(s)</span>
+            {% elif latest.movement == 'dropped' %}
+            <span class="rounded-full bg-red-50 px-2 py-1 font-semibold text-red-700">Lower by {{ -latest.rank_delta }} rank(s)</span>
+            {% elif latest.movement == 'same' %}
+            <span class="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-700">Same rank</span>
+            {% else %}
+            <span class="rounded-full bg-blue-50 px-2 py-1 font-semibold text-blue-700">Baseline</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          {% for point in trend.points %}
+          <div class="rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+            <div class="text-xs font-medium text-slate-500">{{ point.exam_display_name }}</div>
+            <div class="text-lg font-semibold">Rank {{ point.rank }}</div>
+            <div class="text-xs text-slate-600">{{ point.score }} / {{ point.max_marks }} · {{ point.percentage }}%</div>
+          </div>
+          {% if not loop.last %}
+          <div class="text-slate-400">→</div>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">No rank movement available for the selected filters.</div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="panel mt-6">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h3>Trend Analysis</h3>
+      <p class="mt-1 text-sm text-slate-600">Subject-wise rank timeline for the selected tests. Lower rank numbers are better.</p>
+    </div>
+  </div>
+  <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+    {% for trend in rank_trends %}
+    <div class="rounded-lg border border-slate-200 p-4">
+      <div class="flex items-center justify-between gap-3">
+        <h4 class="font-semibold">{{ trend.subject_display_name }}</h4>
+        {% set first_point = trend.points[0] %}
+        {% set last_point = trend.points[-1] %}
+        {% if last_point.rank < first_point.rank %}
+        <span class="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">Improved {{ first_point.rank - last_point.rank }}</span>
+        {% elif last_point.rank > first_point.rank %}
+        <span class="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">Dropped {{ last_point.rank - first_point.rank }}</span>
+        {% else %}
+        <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">No net change</span>
+        {% endif %}
+      </div>
+      <div class="mt-4 flex flex-wrap items-stretch gap-2">
+        {% for point in trend.points %}
+        <div class="min-w-36 flex-1 rounded-lg bg-white p-3 ring-1 ring-slate-200">
+          <div class="text-xs font-semibold text-slate-500">{{ point.exam_display_name }}</div>
+          <div class="mt-1 text-2xl font-semibold">#{{ point.rank }}</div>
+          <div class="text-xs text-slate-600">of {{ point.student_count }} students</div>
+          <div class="mt-1 text-xs text-slate-700">{{ point.score }} / {{ point.max_marks }} ({{ point.percentage }}%)</div>
+        </div>
+        {% if not loop.last %}
+        {% set next_point = trend.points[loop.index] %}
+        <div class="flex items-center gap-1 text-sm font-semibold">
+          {% if next_point.rank < point.rank %}
+          <span class="text-emerald-700">↑ {{ point.rank - next_point.rank }}</span>
+          {% elif next_point.rank > point.rank %}
+          <span class="text-red-700">↓ {{ next_point.rank - point.rank }}</span>
+          {% else %}
+          <span class="text-slate-500">→ 0</span>
+          {% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="rounded-lg border border-slate-200 p-6 text-slate-500">No rank trend available.</div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel mt-6">
+  <h3>Filtered Comparison Table</h3>
+  <p class="mt-1 text-sm text-slate-600">This table is the detailed data behind the selected filters: each selected test and subject with Svanik's rank, score, top-10 average, and highest percentage.</p>
+  <div class="mt-4 space-y-5">
+    {% for group in grouped_comparisons %}
+    <div class="rounded-lg border border-slate-200">
+      <div class="border-b bg-slate-50 px-4 py-3">
+        <h4 class="font-semibold">{{ group.exam_display_name }}</h4>
+      </div>
+      <div class="overflow-auto">
+        <table class="min-w-full border-collapse text-sm">
+          <thead class="bg-white">
+            <tr>
+              <th class="border-b p-3 text-left">Subject</th>
+              <th class="border-b p-3 text-right">Rank</th>
+              <th class="border-b p-3 text-right">{{ student_name }}</th>
+              <th class="border-b p-3 text-right">Top 10 Avg</th>
+              <th class="border-b p-3 text-right">Highest</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for comparison in group["items"] %}
+            <tr class="hover:bg-slate-50">
+              <td class="border-b p-3 font-medium">{{ comparison.subject_display_name }}</td>
+              {% if comparison.target %}
+              <td class="border-b p-3 text-right">{{ comparison.target.rank }}</td>
+              <td class="border-b p-3 text-right">{{ comparison.target.score }} / {{ comparison.target.max_marks }} ({{ comparison.target.percentage }}%)</td>
+              {% else %}
+              <td class="border-b p-3 text-right">-</td>
+              <td class="border-b p-3 text-right">No score</td>
+              {% endif %}
+              <td class="border-b p-3 text-right">{{ comparison.top_average_pct }}%</td>
+              <td class="border-b p-3 text-right">{{ comparison.highest_pct }}%</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <div class="rounded-lg border border-slate-200 p-6 text-center text-slate-500">No approved marks match the selected filters.</div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="mt-6 space-y-6">
+  {% for group in grouped_comparisons %}
+  <div class="panel">
+    <h3>{{ group.exam_display_name }} Top 10</h3>
+    <div class="mt-4 grid grid-cols-1 gap-5 xl:grid-cols-2">
+      {% for comparison in group["items"] %}
+      <article class="rounded-lg border border-slate-200 p-4">
+        <div class="flex items-start justify-between gap-4">
+          <h4 class="font-semibold">{{ comparison.subject_display_name }}</h4>
+          {% if comparison.target %}
+          <div class="text-right">
+            <div class="text-sm text-slate-500">Rank</div>
+            <div class="text-2xl font-semibold">{{ comparison.target.rank }}</div>
+          </div>
+          {% else %}
+          <div class="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-600">No score</div>
+          {% endif %}
+        </div>
+
+        <div class="mt-4 overflow-auto rounded-lg border border-slate-200">
+          <table class="min-w-full border-collapse text-sm">
+            <thead class="bg-slate-50">
+              <tr>
+                <th class="border-b p-2 text-left">Rank</th>
+                <th class="border-b p-2 text-left">Student</th>
+                <th class="border-b p-2 text-left">Section</th>
+                <th class="border-b p-2 text-right">Score</th>
+                <th class="border-b p-2 text-right">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in comparison.top_students %}
+              <tr class="{% if comparison.target and row.student_name == comparison.target.student_name %}bg-blue-50{% else %}hover:bg-slate-50{% endif %}">
+                <td class="border-b p-2">{{ row.rank }}</td>
+                <td class="border-b p-2 font-medium">{{ row.student_name }}</td>
+                <td class="border-b p-2">{{ row.section }}</td>
+                <td class="border-b p-2 text-right">{{ row.score }} / {{ row.max_marks }}</td>
+                <td class="border-b p-2 text-right">{{ row.percentage }}</td>
+              </tr>
+              {% endfor %}
+              {% if comparison.target and comparison.target.rank > 10 %}
+              <tr class="bg-blue-50">
+                <td class="border-b p-2">{{ comparison.target.rank }}</td>
+                <td class="border-b p-2 font-medium">{{ comparison.target.student_name }}</td>
+                <td class="border-b p-2">{{ comparison.target.section }}</td>
+                <td class="border-b p-2 text-right">{{ comparison.target.score }} / {{ comparison.target.max_marks }}</td>
+                <td class="border-b p-2 text-right">{{ comparison.target.percentage }}</td>
+              </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</section>
+
+<script>
+  const comparisons = {{ comparisons | tojson }};
+  const availableTests = {{ options.exam_terms | tojson }};
+  const testLabels = {{ options.exam_labels | tojson }};
+  const visible = comparisons.filter(item => item.target);
+  new Chart(document.getElementById('comparisonChart'), {
+    type: 'bar',
+    data: {
+      labels: visible.map(item => `${item.exam_display_name} - ${item.subject_display_name}`),
+      datasets: [
+        {
+          label: '{{ student_name }} %',
+          data: visible.map(item => item.target.percentage),
+          backgroundColor: '#2563eb'
+        },
+        {
+          label: 'Top 10 Avg %',
+          data: visible.map(item => item.top_average_pct),
+          backgroundColor: '#f59e0b'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, max: 100 } }
+    }
+  });
+
+  const testSearch = document.getElementById('test-search');
+  const availableTestList = document.getElementById('available-test-list');
+  const orderList = document.getElementById('test-order-list');
+  const hiddenOrder = document.getElementById('test-order-hidden');
+  const form = document.getElementById('svanik-filter-form');
+  const clearTests = document.getElementById('clear-tests');
+  let draggedItem = null;
+
+  function selectedTests() {
+    return Array.from(availableTestList.querySelectorAll('input:checked')).map(input => input.value);
+  }
+
+  function createOrderRow(name) {
+    const row = document.createElement('div');
+    row.draggable = true;
+    row.className = 'test-order-item flex cursor-grab items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 text-sm ring-1 ring-slate-200';
+    row.dataset.testName = name;
+    const label = document.createElement('span');
+    label.className = 'flex items-center gap-2';
+    const handle = document.createElement('span');
+    handle.className = 'text-slate-400';
+    handle.textContent = '☰';
+    const text = document.createElement('span');
+    text.className = 'font-medium';
+    text.textContent = testLabels[name] || name;
+    label.append(handle, text);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'rounded border px-2 py-1 text-xs';
+    button.dataset.removeTest = '';
+    button.textContent = 'Remove';
+    row.append(label, button);
+    return row;
+  }
+
+  function syncOrderListFromSelection() {
+    const selected = selectedTests();
+    const existing = Array.from(orderList.querySelectorAll('[data-test-name]'))
+      .map(item => item.dataset.testName)
+      .filter(name => selected.includes(name));
+    const ordered = [...existing, ...selected.filter(name => !existing.includes(name))];
+    orderList.innerHTML = '';
+    ordered.forEach(name => orderList.appendChild(createOrderRow(name)));
+  }
+
+  function updateAvailableVisibility() {
+    const query = testSearch.value.trim().toLowerCase();
+    availableTestList.querySelectorAll('.available-test').forEach(row => {
+      row.classList.toggle('hidden', query && !row.dataset.testName.toLowerCase().includes(query));
+    });
+  }
+
+  orderList.addEventListener('dragstart', event => {
+    draggedItem = event.target.closest('[data-test-name]');
+    if (!draggedItem) return;
+    draggedItem.classList.add('opacity-50');
+    event.dataTransfer.effectAllowed = 'move';
+  });
+
+  orderList.addEventListener('dragend', () => {
+    if (draggedItem) draggedItem.classList.remove('opacity-50');
+    draggedItem = null;
+    orderList.querySelectorAll('[data-drop-target]').forEach(item => {
+      item.removeAttribute('data-drop-target');
+      item.classList.remove('ring-2', 'ring-blue-500');
+    });
+  });
+
+  orderList.addEventListener('dragover', event => {
+    event.preventDefault();
+    const target = event.target.closest('[data-test-name]');
+    if (!draggedItem || !target || target === draggedItem) return;
+    const box = target.getBoundingClientRect();
+    const insertAfter = event.clientY > box.top + box.height / 2;
+    orderList.insertBefore(draggedItem, insertAfter ? target.nextSibling : target);
+  });
+
+  orderList.addEventListener('click', event => {
+    const button = event.target.closest('button[data-remove-test]');
+    if (!button) return;
+    const row = button.closest('[data-test-name]');
+    const checkbox = availableTestList.querySelector(`input[value="${CSS.escape(row.dataset.testName)}"]`);
+    if (checkbox) {
+      checkbox.checked = false;
+    }
+    row.remove();
+  });
+
+  availableTestList.addEventListener('change', syncOrderListFromSelection);
+  testSearch.addEventListener('input', updateAvailableVisibility);
+  clearTests.addEventListener('click', () => {
+    availableTestList.querySelectorAll('input').forEach(input => {
+      input.checked = false;
+    });
+    orderList.innerHTML = '';
+  });
+  form.addEventListener('submit', () => {
+    hiddenOrder.innerHTML = '';
+    Array.from(orderList.querySelectorAll('[data-test-name]')).forEach(row => {
+      const examInput = document.createElement('input');
+      examInput.type = 'hidden';
+      examInput.name = 'exam_term';
+      examInput.value = row.dataset.testName;
+      hiddenOrder.appendChild(examInput);
+
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'ordered_exam_term';
+      input.value = row.dataset.testName;
+      hiddenOrder.appendChild(input);
+    });
+  });
+</script>
+{% endblock %}

@@ -1,18 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="corporate">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}EduTrace{% endblock %}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.24/dist/full.min.css" rel="stylesheet">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body class="bg-slate-100 text-slate-900">
   <header class="bg-slate-950 text-white">
     <div class="mx-auto max-w-7xl px-6 py-5">
       <h1 class="text-3xl font-bold">EduTrace</h1>
       <p class="text-sm text-slate-300">Student marks analytics, trends, and AI-ready ingestion.</p>
+      <nav class="mt-4 flex flex-wrap gap-2 text-sm">
+        <a href="/" class="nav-tab {% if request.url.path == '/' %}nav-tab-active{% else %}nav-tab-idle{% endif %}">Consolidated</a>
+        <a href="/dashboards/svanik" class="nav-tab {% if request.url.path == '/dashboards/svanik' %}nav-tab-active{% else %}nav-tab-idle{% endif %}">Svanik vs Top 10</a>
+        <a href="/dashboards/student-compare" class="nav-tab {% if request.url.path == '/dashboards/student-compare' %}nav-tab-active{% else %}nav-tab-idle{% endif %}">Student Compare</a>
+        <a href="/dashboards/approved-marks" class="nav-tab {% if request.url.path == '/dashboards/approved-marks' %}nav-tab-active{% else %}nav-tab-idle{% endif %}">Approved Marks</a>
+        <a href="/audit" class="nav-tab {% if request.url.path.startswith('/audit') %}nav-tab-active{% else %}nav-tab-idle{% endif %}">Audit</a>
+        <a href="/admin" class="nav-tab {% if request.url.path.startswith('/admin') %}nav-tab-active{% else %}nav-tab-idle{% endif %}">Admin</a>
+      </nav>
     </div>
   </header>
 

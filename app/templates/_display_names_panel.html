@@ -1,0 +1,57 @@
+<section id="display-names-panel" class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+  <div class="panel">
+    <h3>Test Display Names</h3>
+    <p class="mt-1 text-sm text-slate-600">Keep imported test names stable and set the shorter label shown in dashboards.</p>
+    <div class="mt-4 space-y-3">
+      {% for exam in exam_display_names %}
+      {% set form_id = 'exam-display-' ~ exam.id %}
+      <div class="rounded-lg border border-slate-200 p-3">
+        <div class="text-xs font-semibold uppercase text-slate-500">{{ exam.academic_year }} · {{ exam.exam_term }}</div>
+        <form
+          id="{{ form_id }}"
+          action="/admin/display-names/exams"
+          method="post"
+          hx-post="/admin/display-names/exams"
+          hx-target="#display-names-panel"
+          hx-swap="outerHTML"
+          class="mt-2 grid grid-cols-[1fr_auto] gap-2"
+        >
+          <input type="hidden" name="exam_id" value="{{ exam.id }}">
+          <input name="display_name" value="{{ exam.display_name }}" placeholder="{{ exam.exam_term }}" class="input input-bordered input-sm">
+          <button class="btn btn-primary btn-sm">Save</button>
+        </form>
+      </div>
+      {% else %}
+      <div class="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">No exams yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Subject Display Names</h3>
+    <p class="mt-1 text-sm text-slate-600">Set readable subject labels without changing imported subject keys.</p>
+    <div class="mt-4 space-y-3">
+      {% for subject in subject_display_names %}
+      {% set form_id = 'subject-display-' ~ subject.id %}
+      <div class="rounded-lg border border-slate-200 p-3">
+        <div class="text-xs font-semibold uppercase text-slate-500">{{ subject.subject_name }}</div>
+        <form
+          id="{{ form_id }}"
+          action="/admin/display-names/subjects"
+          method="post"
+          hx-post="/admin/display-names/subjects"
+          hx-target="#display-names-panel"
+          hx-swap="outerHTML"
+          class="mt-2 grid grid-cols-[1fr_auto] gap-2"
+        >
+          <input type="hidden" name="subject_id" value="{{ subject.id }}">
+          <input name="display_name" value="{{ subject.display_name }}" placeholder="{{ subject.subject_name }}" class="input input-bordered input-sm">
+          <button class="btn btn-primary btn-sm">Save</button>
+        </form>
+      </div>
+      {% else %}
+      <div class="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">No subjects yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
