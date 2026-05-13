@@ -6,6 +6,7 @@ from app.db.models.mark import Mark
 from app.db.models.student import Student
 from app.db.models.subject import Subject
 from app.schemas.marks import MarkCreate
+from app.services.privacy_service import PrivacyService
 
 
 class MarkRepository:
@@ -239,7 +240,10 @@ class MarkRepository:
                     "exam_date": exam.exam_date,
                     "subject_name": subject.subject_name,
                     "subject_display_name": subject.display_name or subject.subject_name,
-                    "student_name": self.format_student_name(student.student_name),
+                    "student_name": PrivacyService.display_name(
+                        self.format_student_name(student.student_name)
+                    ),
+                    "student_key": self.format_student_name(student.student_name),
                     "score": mark.score,
                     "max_marks": mark.max_marks,
                     "percentage": percentage,

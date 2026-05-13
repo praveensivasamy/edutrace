@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.repositories.mark_repository import MarkRepository
 from app.schemas.marks import MarkCreate
+from app.services.privacy_service import PrivacyService
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,8 @@ class ReviewService:
         selected_indices: set[int] | None = None,
     ) -> int:
         repo = MarkRepository(self.db)
+        privacy = PrivacyService(self.db)
+        privacy.require_key_for_anonymized_upload()
         approved = 0
         try:
             for index, row in enumerate(rows):
@@ -32,6 +35,7 @@ class ReviewService:
                 )
                 if not all(required_values):
                     continue
+                row = {**row, "student_name": PrivacyService.storage_name(row["student_name"])}
                 data = MarkCreate(**row, source_upload_id=upload_id)
                 repo.upsert_mark(data, commit=False)
                 approved += 1

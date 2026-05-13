@@ -132,6 +132,13 @@ uploads/
 - For Azure deployment without mounted storage, data can be lost on container restart/redeploy.
 - For learning, start local first, then move to Azure Container Apps.
 - Use `EDUTRACE_LOG_LEVEL` to control container log verbosity. Default is `INFO`.
+- Set `EDUTRACE_TARGET_STUDENT_QUERY` locally to choose the private target student used by the Target vs Top 10 dashboard. Leave it out of committed files.
+- Admin Privacy can anonymize `students.student_name` before committing the DB. It downloads the encrypted key file. When loaded with its passphrase, real names are shown on screen only and are not written back to SQLite.
+- If names are anonymized, load the private key before approving future uploads. Incoming real names are mapped back to their aliases before marks are saved, preventing real names from being reintroduced into the DB.
+- To change the key or passphrase, load the current key and use the Privacy panel's rotate action to download a newly encrypted key.
+- For Azure free-tier/no-persistence deployments, use Admin Privacy to download the current SQLite DB before redeploying or restarting the container.
+- To recover after data loss, upload a downloaded SQLite DB in Admin Privacy. Restore replaces the running DB exactly as uploaded and does not store a backup inside the container. Run anonymization after recovery if the restored DB contains real names and you plan to commit it.
+- Keep `private/` and `*.student-key.json` files out of Git.
 
 ## Deferred refactors
 

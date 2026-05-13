@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Svanik Analysis{% endblock %}
+{% block title %}Target Student Analysis{% endblock %}
 
 {% block content %}
 <section class="page-heading">
@@ -11,7 +11,7 @@
 </section>
 
 <section class="panel mt-5">
-  <form id="svanik-filter-form" method="get" action="/dashboards/svanik" class="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_1fr_auto]">
+  <form id="target-filter-form" method="get" action="/dashboards/target" class="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_1fr_auto]">
     <div>
       <label class="text-sm font-semibold text-slate-700">Tests and comparison order</label>
       <p class="mt-1 text-xs text-slate-500">Search and select only the tests you want to compare, then drag the selected tests into the desired trend order.</p>
@@ -57,7 +57,7 @@
     </div>
     <div class="flex items-end gap-2">
       <button class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">Apply</button>
-      <a href="/dashboards/svanik" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold">Reset</a>
+      <a href="/dashboards/target" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold">Reset</a>
     </div>
   </form>
 </section>
@@ -75,7 +75,7 @@
   </div>
   <div class="panel">
     <h3>Trend Analysis Summary</h3>
-    <p class="mt-1 text-sm text-slate-600">Each subject compares Svanik's rank from one selected test to the next using the order above.</p>
+    <p class="mt-1 text-sm text-slate-600">Each subject compares the target student's rank from one selected test to the next using the order above.</p>
     <div class="mt-4 space-y-3">
       {% for trend in rank_trends %}
       {% set latest = trend.points[-1] %}
@@ -167,7 +167,7 @@
 
 <section class="panel mt-6">
   <h3>Filtered Comparison Table</h3>
-  <p class="mt-1 text-sm text-slate-600">This table is the detailed data behind the selected filters: each selected test and subject with Svanik's rank, score, top-10 average, and highest percentage.</p>
+  <p class="mt-1 text-sm text-slate-600">This table is the detailed data behind the selected filters: each selected test and subject with the target student's rank, score, top-10 average, and highest percentage.</p>
   <div class="mt-4 space-y-5">
     {% for group in grouped_comparisons %}
     <div class="rounded-lg border border-slate-200">
@@ -301,7 +301,7 @@
   const availableTestList = document.getElementById('available-test-list');
   const orderList = document.getElementById('test-order-list');
   const hiddenOrder = document.getElementById('test-order-hidden');
-  const form = document.getElementById('svanik-filter-form');
+  const form = document.getElementById('target-filter-form');
   const clearTests = document.getElementById('clear-tests');
   let draggedItem = null;
 
