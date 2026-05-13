@@ -1,3 +1,11 @@
+name: Build and Push EduTrace Image
+
+on:
+  push:
+    branches:
+      - initial-setup
+  workflow_dispatch:
+
 env:
   IMAGE_NAME: edutrace
 
@@ -17,9 +25,7 @@ jobs:
 
       - name: Build image
         run: |
-          docker build \
-            -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest \
-            .
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest .
 
       - name: Push image
         run: |
