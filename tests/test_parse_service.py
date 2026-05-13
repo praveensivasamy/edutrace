@@ -14,7 +14,7 @@ def test_parse_csv_upload_extracts_mark_candidates():
     assert candidates == [
         {
             "academic_year": "2026-2027",
-            "class_name": "IX",
+            "class_name": "X",
             "section": "B",
             "exam_term": "T1",
             "exam_date": None,

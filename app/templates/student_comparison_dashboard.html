@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Target Student Analysis{% endblock %}
+{% block title %}My Private Analytics{% endblock %}
 
 {% block content %}
 <section class="page-heading">
@@ -75,7 +75,7 @@
   </div>
   <div class="panel">
     <h3>Trend Analysis Summary</h3>
-    <p class="mt-1 text-sm text-slate-600">Each subject compares the target student's rank from one selected test to the next using the order above.</p>
+    <p class="mt-1 text-sm text-slate-600">Each subject compares {{ student_name }}'s rank from one selected test to the next using the order above.</p>
     <div class="mt-4 space-y-3">
       {% for trend in rank_trends %}
       {% set latest = trend.points[-1] %}
@@ -167,7 +167,7 @@
 
 <section class="panel mt-6">
   <h3>Filtered Comparison Table</h3>
-  <p class="mt-1 text-sm text-slate-600">This table is the detailed data behind the selected filters: each selected test and subject with the target student's rank, score, top-10 average, and highest percentage.</p>
+  <p class="mt-1 text-sm text-slate-600">This table is the detailed data behind the selected filters: each selected test and subject with {{ student_name }}'s rank, score, top-10 average, and highest percentage.</p>
   <div class="mt-4 space-y-5">
     {% for group in grouped_comparisons %}
     <div class="rounded-lg border border-slate-200">

@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     upload_dir: Path = Field(default=Path("./uploads"), alias="EDUTRACE_UPLOAD_DIR")
     private_dir: Path = Field(default=Path("./private"), alias="EDUTRACE_PRIVATE_DIR")
     log_level: str = Field(default="INFO", alias="EDUTRACE_LOG_LEVEL")
+    privacy_enabled: bool = Field(default=False, alias="EDUTRACE_PRIVACY_ENABLED")
     target_student_query: str = Field(default="", alias="EDUTRACE_TARGET_STUDENT_QUERY")
 
     model_config = SettingsConfigDict(extra="ignore", populate_by_name=True)

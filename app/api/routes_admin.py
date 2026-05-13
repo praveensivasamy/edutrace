@@ -16,6 +16,11 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 templates = Jinja2Templates(directory="app/templates")
 
 
+def _require_privacy_enabled() -> None:
+    if not PrivacyService.privacy_enabled():
+        raise HTTPException(status_code=404, detail="Privacy features are disabled.")
+
+
 @router.get("", response_class=HTMLResponse)
 def admin_dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
     service = AdminService(db)
@@ -157,6 +162,7 @@ def anonymize_student_names(
     db: Annotated[Session, Depends(get_db)],
     passphrase: Annotated[str, Form()],
 ):
+    _require_privacy_enabled()
     try:
         key_bytes = PrivacyService(db).anonymize_students(passphrase)
     except ValueError as exc:
@@ -177,6 +183,7 @@ async def load_student_reveal_key(
     passphrase: Annotated[str, Form()],
     db: Annotated[Session, Depends(get_db)],
 ):
+    _require_privacy_enabled()
     try:
         PrivacyService.load_reveal_key(await key_file.read(), passphrase)
     except (ValueError, KeyError) as exc:
@@ -192,6 +199,7 @@ async def load_student_reveal_key(
 
 @router.post("/privacy/clear-key")
 def clear_student_reveal_key(request: Request, db: Annotated[Session, Depends(get_db)]):
+    _require_privacy_enabled()
     clear_reveal_key()
     if request.headers.get("hx-request"):
         return templates.TemplateResponse(
@@ -204,6 +212,7 @@ def clear_student_reveal_key(request: Request, db: Annotated[Session, Depends(ge
 
 @router.post("/privacy/rotate-key")
 def rotate_student_key(new_passphrase: Annotated[str, Form()]):
+    _require_privacy_enabled()
     try:
         key_bytes = PrivacyService.rotate_key(new_passphrase)
     except ValueError as exc:

@@ -1,12 +1,21 @@
 <section id="privacy-panel" class="panel mt-6">
   <h3>Privacy</h3>
+  {% if privacy.privacy_enabled %}
   <p class="mt-1 text-sm text-slate-600">Anonymize student names before committing the database. Loading a private key reveals names on screen only until the app restarts or the key is cleared.</p>
+  {% else %}
+  <p class="mt-1 text-sm text-slate-600">Privacy masking is disabled. Student names are shown from the current database. Download and restore remain available. To enable privacy mode and anonymize names, contact the administrator to set <code>EDUTRACE_PRIVACY_ENABLED=true</code>.</p>
+  {% endif %}
 
-  <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+  <div class="mt-4 grid grid-cols-2 gap-3 {% if privacy.privacy_enabled %}md:grid-cols-4{% else %}md:grid-cols-3{% endif %}">
+    <div class="rounded-lg border border-slate-200 p-3">
+      <div class="text-xs font-semibold uppercase text-slate-500">Privacy</div>
+      <div class="mt-1 text-xl font-semibold">{% if privacy.privacy_enabled %}Enabled{% else %}Disabled{% endif %}</div>
+    </div>
     <div class="rounded-lg border border-slate-200 p-3">
       <div class="text-xs font-semibold uppercase text-slate-500">Students</div>
       <div class="mt-1 text-xl font-semibold">{{ privacy.student_count }}</div>
     </div>
+    {% if privacy.privacy_enabled %}
     <div class="rounded-lg border border-slate-200 p-3">
       <div class="text-xs font-semibold uppercase text-slate-500">Anonymized</div>
       <div class="mt-1 text-xl font-semibold">{{ privacy.anonymized_count }}</div>
@@ -19,6 +28,12 @@
       <div class="text-xs font-semibold uppercase text-slate-500">Revealed Names</div>
       <div class="mt-1 text-xl font-semibold">{{ privacy.revealed_count }}</div>
     </div>
+    {% else %}
+    <div class="rounded-lg border border-slate-200 p-3">
+      <div class="text-xs font-semibold uppercase text-slate-500">Name Controls</div>
+      <div class="mt-1 text-xl font-semibold">Off</div>
+    </div>
+    {% endif %}
   </div>
   <div class="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
     <div><span class="font-semibold">Container backup policy:</span> No DB backups are stored inside the container. Download the SQLite DB when you need a recoverable copy.</div>
@@ -28,6 +43,7 @@
   </div>
 
   <div class="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    {% if privacy.privacy_enabled %}
     <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
       <h4 class="font-semibold text-amber-950">Anonymize DB</h4>
       <p class="mt-1 text-sm text-amber-900">This replaces names in SQLite with aliases and downloads the encrypted private key. Download the current SQLite DB first if you need a backup. Keep the downloaded files out of Git.</p>
@@ -75,8 +91,9 @@
         </div>
       </form>
     </div>
+    {% endif %}
 
-    <div class="rounded-lg border border-rose-200 bg-rose-50 p-4 lg:col-span-2">
+    <div class="rounded-lg border border-rose-200 bg-rose-50 p-4 {% if privacy.privacy_enabled %}lg:col-span-2{% else %}lg:col-span-2{% endif %}">
       <h4 class="font-semibold text-rose-950">Restore SQLite DB</h4>
       <p class="mt-1 text-sm text-rose-900">This replaces the running database with the uploaded backup. Download the current SQLite DB first if you need to keep it. It restores the DB exactly as uploaded; anonymization can be run after recovery if needed.</p>
       <form action="/admin/privacy/restore-db" method="post" enctype="multipart/form-data" class="mt-3 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto]">

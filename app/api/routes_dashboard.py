@@ -9,7 +9,6 @@ from app.core.config import get_settings
 from app.db.repositories.mark_repository import MarkRepository
 from app.db.session import get_db
 from app.services.analytics_service import AnalyticsService
-from app.services.privacy_service import PrivacyService
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -60,9 +59,11 @@ def target_dashboard(
     ordered_exam_term: Annotated[list[str] | None, Query()] = None,
 ):
     rows = MarkRepository(db).list_marks()
+    settings = get_settings()
     rows, student_name = _privacy_safe_target_rows(
         rows,
-        get_settings().target_student_query,
+        settings.target_student_query,
+        privacy_enabled=settings.privacy_enabled,
     )
     options = AnalyticsService.analysis_options(rows)
     selected_exam_terms = exam_term or []
@@ -150,25 +151,32 @@ def _ordered_tests(
     return submitted + remainder
 
 
-def _privacy_safe_target_rows(rows: list[dict], student_query: str) -> tuple[list[dict], str]:
+def _privacy_safe_target_rows(
+    rows: list[dict],
+    student_query: str,
+    privacy_enabled: bool = True,
+) -> tuple[list[dict], str]:
     normalized_query = student_query.strip().lower()
     if not normalized_query:
-        return [_storage_name_row(row) for row in rows], TARGET_STUDENT_LABEL
+        return _display_rows(rows, privacy_enabled), TARGET_STUDENT_LABEL
 
     matched_storage_name = ""
+    matched_display_name = ""
     for row in rows:
-        if normalized_query in row["student_name"].lower():
-            matched_storage_name = row.get("student_key") or row["student_name"]
+        display_name = row["student_name"]
+        storage_name = row.get("student_key") or display_name
+        if normalized_query in display_name.lower() or normalized_query in storage_name.lower():
+            matched_storage_name = storage_name
+            matched_display_name = display_name
             break
 
     if not matched_storage_name:
-        return [_storage_name_row(row) for row in rows], TARGET_STUDENT_LABEL
+        return _display_rows(rows, privacy_enabled), TARGET_STUDENT_LABEL
 
-    target_label = (
-        matched_storage_name
-        if PrivacyService.is_alias(matched_storage_name)
-        else TARGET_STUDENT_LABEL
-    )
+    target_label = matched_display_name or matched_storage_name
+    if not privacy_enabled:
+        return rows, target_label
+
     private_rows = []
     for row in rows:
         private_row = _storage_name_row(row)
@@ -180,6 +188,12 @@ def _privacy_safe_target_rows(rows: list[dict], student_query: str) -> tuple[lis
 
 def _storage_name_row(row: dict) -> dict:
     return {**row, "student_name": row.get("student_key") or row["student_name"]}
+
+
+def _display_rows(rows: list[dict], privacy_enabled: bool) -> list[dict]:
+    if not privacy_enabled:
+        return rows
+    return [_storage_name_row(row) for row in rows]
 
 
 @router.get("/dashboards/approved-marks", response_class=HTMLResponse)

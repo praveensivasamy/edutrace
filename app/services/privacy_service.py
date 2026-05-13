@@ -34,6 +34,7 @@ class PrivacyService:
             1 for student in students if self.is_alias(student.student_name)
         )
         return {
+            "privacy_enabled": get_settings().privacy_enabled,
             "student_count": len(students),
             "anonymized_count": anonymized_count,
             "reveal_key_loaded": bool(_revealed_names),
@@ -47,6 +48,10 @@ class PrivacyService:
         if not settings.database_url.startswith(prefix):
             return None
         return settings.database_url.removeprefix(prefix)
+
+    @staticmethod
+    def privacy_enabled() -> bool:
+        return get_settings().privacy_enabled
 
     def anonymize_students(self, passphrase: str) -> bytes:
         self._require_passphrase(passphrase)
@@ -71,6 +76,8 @@ class PrivacyService:
         return _real_to_alias.get(student_name, student_name)
 
     def require_key_for_anonymized_upload(self) -> None:
+        if not self.privacy_enabled():
+            return
         status = self.status()
         if status["anonymized_count"] and not _real_to_alias:
             raise ValueError("Load the private student key before approving new uploads.")
