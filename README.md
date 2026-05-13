@@ -4,7 +4,16 @@ EduTrace is a FastAPI + SQLite student marks analytics starter project.
 
 It is designed for local PyCharm development first, with a clean path to Podman/Docker Hub/Azure Container Apps later.
 
-## Features in this starter
+## Metrics
+
+![Python](https://img.shields.io/badge/python-3.14-blue)
+
+![Azure](https://img.shields.io/badge/Azure-Container%20Apps-blue)
+
+![Docker](https://img.shields.io/docker/image-size/praveensiva/edutrace/latest)
+
+[![Build Push and Deploy EduTrace](https://github.com/praveensivasamy/edutrace/actions/workflows/dockerhub-build.yml/badge.svg)](https://github.com/praveensivasamy/edutrace/actions/workflows/dockerhub-build.yml)
+## Technical Features in this starter
 
 - FastAPI application
 - SQLite database
@@ -16,17 +25,21 @@ It is designed for local PyCharm development first, with a clean path to Podman/
 - CSV export endpoint
 - Manual mark entry form
 - Upload review flow for Excel/CSV/text marks files
+- Paste CSV content directly and preview it before approval
 - Screenshot upload staging before OCR/AI parsing is configured
 - Human approval before extracted marks are committed to SQLite
-- Podman-compatible `Containerfile`
+- Consolidated dashboard for overall marks and toppers
+- Analytics dashboard for subject-wise and test-wise comparison
+- Student comparison dashboard for arbitrary student comparison
+- Approved Marks dashboard with edit support
+- Audit dashboard for approved mark inspection
+- Separate Privacy tab for anonymize, reveal, download, and restore flows
 - `uv` dependency management
-- `project-goal.md` architecture blueprint
 
 ## Requirements
 
 - Python 3.14
 - uv
-- Podman optional
 
 > If Python 3.14 is not yet installed locally, install it first and point PyCharm to that interpreter.
 
@@ -127,13 +140,10 @@ uploads/
 
 ## Notes
 
-- SQLite is stored at `data/edutrace.db` by default.
-- Uploaded files are stored in `uploads/`.
-- For Azure deployment without mounted storage, data can be lost on container restart/redeploy.
-- For learning, start local first, then move to Azure Container Apps.
+
 - Use `EDUTRACE_LOG_LEVEL` to control container log verbosity. Default is `INFO`.
 - Set `EDUTRACE_PRIVACY_ENABLED=false` to disable privacy masking for all users. This hides anonymize/key/reveal/rotate controls and leaves only SQLite DB download and restore in the Privacy tab. If the DB already stores aliases, restore a real-name DB first.
-- The Svanik Analytics dashboard targets `Svanik P` by default. Set `EDUTRACE_TARGET_STUDENT_QUERY` only if you need to override that locally.
+- Set `EDUTRACE_PRIVACY_ENABLED=true` to enable privacy mode for anonymizing names and loading or rotating reveal keys.
 - Admin Privacy can anonymize `students.student_name` before committing the DB. It downloads the encrypted key file. When loaded with its passphrase, real names are shown on screen only and are not written back to SQLite.
 - If names are anonymized, load the private key before approving future uploads. Incoming real names are mapped back to their aliases before marks are saved, preventing real names from being reintroduced into the DB.
 - To change the key or passphrase, load the current key and use the Privacy panel's rotate action to download a newly encrypted key.
