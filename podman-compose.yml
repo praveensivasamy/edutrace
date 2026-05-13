@@ -2,7 +2,7 @@ services:
   edutrace:
     build:
       context: .
-      dockerfile: Containerfile
+      dockerfile: Dockerfile
     container_name: edutrace
     ports:
       - "8000:8000"
