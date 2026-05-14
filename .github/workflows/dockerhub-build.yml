@@ -3,7 +3,7 @@ name: Build Push and Deploy EduTrace
 on:
   push:
     branches:
-      - main
+      - initial-setup
   workflow_dispatch:
 
 env:
