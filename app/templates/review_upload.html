@@ -14,7 +14,7 @@
     <a href="/" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">Dashboard</a>
   </div>
 
-  <form action="/uploads/{{ upload.id }}/approve" method="post" class="mt-5">
+  <form action="/uploads/{{ upload.id }}/approve" method="post" data-busy-form data-busy-text="Approving…" class="mt-5">
     <div class="overflow-auto rounded-lg border border-slate-200">
       <table class="min-w-full border-collapse text-sm">
         <thead class="bg-slate-50">
@@ -59,7 +59,7 @@
     </div>
   </form>
 
-  <form action="/uploads/{{ upload.id }}/reject" method="post" class="mt-3">
+  <form action="/uploads/{{ upload.id }}/reject" method="post" data-busy-form data-busy-text="Rejecting…" class="mt-3">
     <button class="rounded-lg bg-red-700 px-4 py-2 font-semibold text-white">Reject and exit</button>
   </form>
 </section>

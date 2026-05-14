@@ -5,6 +5,111 @@ from datetime import date
 
 class AnalyticsService:
     @staticmethod
+    def dashboard_overview(rows: list[dict], *, ranking_limit: int = 12) -> dict:
+        if not rows:
+            return {
+                "summary": AnalyticsService.summary([]),
+                "student_rankings": [],
+                "subject_summary": [],
+                "section_summary": [],
+                "subject_toppers": [],
+            }
+
+        percentages: list[float] = []
+        unique_students: set[str] = set()
+        unique_subjects: set[str] = set()
+        student_totals: dict[str, dict] = {}
+        subject_percentages: dict[str, list[float]] = defaultdict(list)
+        subject_labels: dict[str, str] = {}
+        section_percentages: dict[str, list[float]] = defaultdict(list)
+        section_students: dict[str, set[str]] = defaultdict(set)
+        topper_groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
+
+        for row in rows:
+            student_name = row["student_name"]
+            subject_name = row["subject_name"]
+            section = row["section"]
+            percentage = row.get("percentage")
+            score = row.get("score")
+            max_marks = row.get("max_marks")
+
+            unique_students.add(student_name)
+            unique_subjects.add(subject_name)
+            section_students[section].add(student_name)
+            subject_labels[subject_name] = row.get("subject_display_name", subject_name)
+
+            if percentage is not None:
+                percentages.append(percentage)
+                subject_percentages[subject_name].append(percentage)
+                section_percentages[section].append(percentage)
+            if score is not None and max_marks:
+                student = student_totals.setdefault(
+                    student_name,
+                    {
+                        "student_name": student_name,
+                        "class_name": row["class_name"],
+                        "section": section,
+                        "score": 0,
+                        "max_marks": 0,
+                        "subjects": 0,
+                    },
+                )
+                student["score"] += score
+                student["max_marks"] += max_marks
+                student["subjects"] += 1
+            if score is not None and percentage is not None:
+                topper_groups[(row["exam_term"], subject_name)].append(row)
+
+        summary = {
+            "records": len(rows),
+            "students": len(unique_students),
+            "subjects": len(unique_subjects),
+            "average_pct": round(sum(percentages) / len(percentages), 1) if percentages else 0,
+            "highest_pct": max(percentages) if percentages else 0,
+            "lowest_pct": min(percentages) if percentages else 0,
+        }
+        student_rankings = sorted(
+            (
+                {
+                    **student,
+                    "percentage": round((student["score"] / student["max_marks"]) * 100, 1)
+                    if student["max_marks"]
+                    else 0,
+                }
+                for student in student_totals.values()
+            ),
+            key=lambda item: item["percentage"],
+            reverse=True,
+        )[:ranking_limit]
+        subject_summary = [
+            {
+                "subject_name": subject,
+                "subject_display_name": subject_labels.get(subject, subject),
+                "average_pct": round(sum(values) / len(values), 1),
+                "highest_pct": max(values),
+                "lowest_pct": min(values),
+                "records": len(values),
+            }
+            for subject, values in sorted(subject_percentages.items())
+        ]
+        section_summary = [
+            {
+                "section": section,
+                "students": len(section_students[section]),
+                "average_pct": round(sum(values) / len(values), 1) if values else 0,
+            }
+            for section, values in sorted(section_percentages.items())
+        ]
+        subject_toppers = AnalyticsService._subject_toppers_from_groups(topper_groups)
+        return {
+            "summary": summary,
+            "student_rankings": student_rankings,
+            "subject_summary": subject_summary,
+            "section_summary": section_summary,
+            "subject_toppers": AnalyticsService.grouped_subject_toppers_by_test(subject_toppers),
+        }
+
+    @staticmethod
     def summary(rows: list[dict]) -> dict:
         if not rows:
             return {
@@ -134,40 +239,14 @@ class AnalyticsService:
         for row in rows:
             if row.get("score") is not None and row.get("percentage") is not None:
                 grouped[(row["exam_term"], row["subject_name"])].append(row)
-
-        toppers = []
-        for (exam_term, subject_name), group_rows in sorted(
-            grouped.items(), key=lambda item: AnalyticsService._subject_test_sort_key(item[0])
-        ):
-            top_percentage = max(row["percentage"] for row in group_rows)
-            top_rows = [row for row in group_rows if row["percentage"] == top_percentage]
-            top_score = max(row["score"] for row in top_rows)
-            max_marks = top_rows[0]["max_marks"]
-            toppers.append(
-                {
-                    "exam_term": exam_term,
-                    "exam_display_name": top_rows[0].get("exam_display_name", exam_term),
-                    "subject_name": subject_name,
-                    "subject_display_name": top_rows[0].get(
-                        "subject_display_name", subject_name
-                    ),
-                    "score": top_score,
-                    "max_marks": max_marks,
-                    "percentage": top_percentage,
-                    "students": sorted(
-                        {
-                            f"{row['student_name']} ({row['section']})"
-                            for row in top_rows
-                        }
-                    ),
-                }
-            )
-        return toppers
+        return AnalyticsService._subject_toppers_from_groups(grouped)
 
     @staticmethod
     def grouped_subject_toppers_by_test(rows: list[dict]) -> list[dict]:
+        if rows and "students" not in rows[0]:
+            rows = AnalyticsService.subject_toppers_by_test(rows)
         grouped: dict[str, list[dict]] = defaultdict(list)
-        for topper in AnalyticsService.subject_toppers_by_test(rows):
+        for topper in rows:
             grouped[topper["exam_term"]].append(topper)
         return [
             {
@@ -201,14 +280,7 @@ class AnalyticsService:
             grouped.items(),
             key=lambda item: AnalyticsService._subject_test_sort_key(item[0], exam_order),
         ):
-            ranked = sorted(
-                group_rows,
-                key=lambda row: (
-                    row["percentage"],
-                    row["score"] if row.get("score") is not None else -1,
-                ),
-                reverse=True,
-            )
+            ranked = AnalyticsService._ranked_rows(group_rows)
             top_students = [
                 {
                     "rank": index + 1,
@@ -254,14 +326,7 @@ class AnalyticsService:
         for subject_name, tests in sorted(grouped.items()):
             points = []
             for exam_term, group_rows in sorted(tests.items()):
-                ranked = sorted(
-                    group_rows,
-                    key=lambda row: (
-                        row["percentage"],
-                        row["score"] if row.get("score") is not None else -1,
-                    ),
-                    reverse=True,
-                )
+                ranked = AnalyticsService._ranked_rows(group_rows)
                 target = AnalyticsService._find_student_rank(ranked, normalized_query)
                 if target:
                     points.append(
@@ -341,14 +406,7 @@ class AnalyticsService:
             grouped.items(),
             key=lambda item: AnalyticsService._subject_test_sort_key(item[0]),
         ):
-            ranked = sorted(
-                group_rows,
-                key=lambda row: (
-                    row["percentage"],
-                    row["score"] if row.get("score") is not None else -1,
-                ),
-                reverse=True,
-            )
+            ranked = AnalyticsService._ranked_rows(group_rows)
             rank_by_student = {row["student_name"]: index + 1 for index, row in enumerate(ranked)}
             selected_rows = [
                 {
@@ -492,6 +550,48 @@ class AnalyticsService:
     def _average(values) -> float:
         value_list = list(values)
         return round(sum(value_list) / len(value_list), 1) if value_list else 0
+
+    @staticmethod
+    def _ranked_rows(rows: list[dict]) -> list[dict]:
+        return sorted(
+            rows,
+            key=lambda row: (
+                row["percentage"],
+                row["score"] if row.get("score") is not None else -1,
+            ),
+            reverse=True,
+        )
+
+    @staticmethod
+    def _subject_toppers_from_groups(grouped: dict[tuple[str, str], list[dict]]) -> list[dict]:
+        toppers = []
+        for (exam_term, subject_name), group_rows in sorted(
+            grouped.items(), key=lambda item: AnalyticsService._subject_test_sort_key(item[0])
+        ):
+            top_percentage = max(row["percentage"] for row in group_rows)
+            top_rows = [row for row in group_rows if row["percentage"] == top_percentage]
+            top_score = max(row["score"] for row in top_rows)
+            max_marks = top_rows[0]["max_marks"]
+            toppers.append(
+                {
+                    "exam_term": exam_term,
+                    "exam_display_name": top_rows[0].get("exam_display_name", exam_term),
+                    "subject_name": subject_name,
+                    "subject_display_name": top_rows[0].get(
+                        "subject_display_name", subject_name
+                    ),
+                    "score": top_score,
+                    "max_marks": max_marks,
+                    "percentage": top_percentage,
+                    "students": sorted(
+                        {
+                            f"{row['student_name']} ({row['section']})"
+                            for row in top_rows
+                        }
+                    ),
+                }
+            )
+        return toppers
 
     @staticmethod
     def _comparison_leader(rows: list[dict]) -> dict:

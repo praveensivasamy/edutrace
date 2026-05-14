@@ -7,10 +7,22 @@
     <h2>Audit Marks</h2>
     <p>Inspect approved marks by student, subject, and test.</p>
   </div>
+  <a
+    href="/audit/export-excel?exam_term={{ selected_filters.exam_term | urlencode }}&subject_name={{ selected_filters.subject_name | urlencode }}&student_name={{ selected_filters.student_name | urlencode }}"
+    class="w-fit rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
+  >Export Excel</a>
 </section>
 
 <section class="panel mt-5">
-  <form method="get" action="/audit" class="grid grid-cols-1 gap-3 md:grid-cols-[220px_220px_1fr_auto]">
+  <form
+    method="get"
+    action="/audit"
+    hx-get="/audit"
+    hx-target="#audit-results"
+    hx-swap="outerHTML"
+    hx-indicator="#audit-loading"
+    class="grid grid-cols-1 gap-3 md:grid-cols-[220px_220px_240px_auto]"
+  >
     <select name="exam_term" class="rounded-lg border p-2 text-sm">
       <option value="">All tests</option>
       {% for option in available_filters.exam_terms %}
@@ -23,62 +35,30 @@
       <option value="{{ option.value }}" {% if selected_filters.subject_name == option.value %}selected{% endif %}>{{ option.label }}</option>
       {% endfor %}
     </select>
-    <input name="student_name" value="{{ selected_filters.student_name }}" class="rounded-lg border p-2 text-sm" placeholder="Student name">
+    <select name="student_name" class="rounded-lg border p-2 text-sm">
+      <option value="">All students</option>
+      {% for option in available_filters.students %}
+      <option value="{{ option.value }}" {% if selected_filters.student_name == option.value %}selected{% endif %}>{{ option.label }}</option>
+      {% endfor %}
+    </select>
     <button class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">View marks</button>
   </form>
-  <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+  <div class="mt-3 flex items-center gap-3">
+    <div class="flex flex-wrap gap-2 text-xs text-slate-600">
     {% if selected_filters.exam_term %}<span class="rounded-full bg-blue-50 px-3 py-1 font-semibold text-blue-800">{{ selected_filters.exam_term }}</span>{% endif %}
     {% if selected_filters.subject_name %}<span class="rounded-full bg-emerald-50 px-3 py-1 font-semibold text-emerald-800">{{ selected_filters.subject_name }}</span>{% endif %}
     {% if selected_filters.student_name %}<span class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-800">{{ selected_filters.student_name }}</span>{% endif %}
-    {% if has_filters %}<a href="/audit" class="rounded-full border border-slate-300 px-3 py-1 font-semibold">Clear filters</a>{% endif %}
+    <a href="/audit" class="rounded-full border border-slate-300 px-3 py-1 font-semibold">Clear filters</a>
+    </div>
+    <div id="audit-loading" class="htmx-indicator inline-flex items-center gap-2 text-sm text-slate-600">
+      <span class="spinner"></span>
+      <span>Loading marks…</span>
+    </div>
   </div>
 </section>
 
 <section class="panel mt-6">
-  {% if not has_filters %}
-  <div class="rounded-lg bg-slate-50 p-6 text-center text-slate-600">
-    Select a test, subject, or student name to audit marks.
-  </div>
-  {% else %}
-  <div class="space-y-5">
-    {% for group in grouped_marks %}
-    <div class="rounded-lg border border-slate-200">
-      <div class="border-b bg-slate-50 px-4 py-3">
-        <h3 class="font-semibold">{{ group.exam_display_name }}</h3>
-      </div>
-      <div class="overflow-auto">
-        <table class="min-w-full border-collapse text-sm">
-          <thead class="bg-white">
-            <tr>
-              <th class="border-b p-3 text-left">Student</th>
-              <th class="border-b p-3 text-left">Section</th>
-              <th class="border-b p-3 text-left">Subject</th>
-              <th class="border-b p-3 text-right">Score</th>
-              <th class="border-b p-3 text-right">Max</th>
-              <th class="border-b p-3 text-right">%</th>
-              <th class="border-b p-3 text-left">Remarks</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in group["items"] %}
-            <tr class="hover:bg-slate-50">
-              <td class="border-b p-3 font-medium">{{ row.student_name }}</td>
-              <td class="border-b p-3">{{ row.section }}</td>
-              <td class="border-b p-3">{{ row.subject_display_name }}</td>
-              <td class="border-b p-3 text-right">{{ row.score }}</td>
-              <td class="border-b p-3 text-right">{{ row.max_marks }}</td>
-              <td class="border-b p-3 text-right">{{ row.percentage }}</td>
-              <td class="border-b p-3">{{ row.remarks or '' }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-    {% else %}
-    <div class="rounded-lg border border-slate-200 p-6 text-center text-slate-500">No marks match the selected filters.</div>
-    {% endfor %}
-  </div>
-  {% endif %}
+  <div class="mb-3 text-sm font-semibold text-slate-700">Audit results are always visible. Use filters to narrow the view.</div>
+  {% include "_audit_results.html" %}
 </section>
 {% endblock %}

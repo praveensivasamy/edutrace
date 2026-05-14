@@ -47,7 +47,7 @@
     <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
       <h4 class="font-semibold text-amber-950">Anonymize DB</h4>
       <p class="mt-1 text-sm text-amber-900">This replaces names in SQLite with aliases and downloads the encrypted private key. Download the current SQLite DB first if you need a backup. Keep the downloaded files out of Git.</p>
-      <form action="/admin/privacy/anonymize" method="post" class="mt-3 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto]">
+      <form action="/admin/privacy/anonymize" method="post" data-busy-form data-busy-text="Anonymizing…" class="mt-3 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto]">
         <input name="passphrase" type="password" minlength="8" required placeholder="Private passphrase" class="input input-bordered input-sm">
         <button class="btn btn-warning btn-sm">Anonymize and download key</button>
       </form>
@@ -64,6 +64,7 @@
         hx-encoding="multipart/form-data"
         hx-target="#privacy-panel"
         hx-swap="outerHTML"
+        hx-indicator="#privacy-load-key-loading"
         class="mt-3 grid grid-cols-1 gap-2"
       >
         <input name="key_file" type="file" accept=".json,.student-key" required class="file-input file-input-bordered file-input-sm">
@@ -72,17 +73,26 @@
           <button class="btn btn-primary btn-sm">Load key</button>
         </div>
       </form>
+      <div id="privacy-load-key-loading" class="htmx-indicator mt-2 inline-flex items-center gap-2 text-sm text-slate-600">
+        <span class="spinner"></span>
+        <span>Loading key…</span>
+      </div>
       <form
         action="/admin/privacy/clear-key"
         method="post"
         hx-post="/admin/privacy/clear-key"
         hx-target="#privacy-panel"
         hx-swap="outerHTML"
+        hx-indicator="#privacy-clear-key-loading"
         class="mt-3"
       >
         <button class="btn btn-outline btn-sm">Clear loaded key</button>
       </form>
-      <form action="/admin/privacy/rotate-key" method="post" class="mt-4 border-t pt-3">
+      <div id="privacy-clear-key-loading" class="htmx-indicator mt-2 inline-flex items-center gap-2 text-sm text-slate-600">
+        <span class="spinner"></span>
+        <span>Clearing key…</span>
+      </div>
+      <form action="/admin/privacy/rotate-key" method="post" data-busy-form data-busy-text="Rotating…" class="mt-4 border-t pt-3">
         <label class="block text-sm font-semibold text-slate-700">Rotate key/passphrase</label>
         <p class="mt-1 text-xs text-slate-500">Load the current key first, then enter a new passphrase to download a new encrypted key.</p>
         <div class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto]">
@@ -96,7 +106,7 @@
     <div class="rounded-lg border border-rose-200 bg-rose-50 p-4 {% if privacy.privacy_enabled %}lg:col-span-2{% else %}lg:col-span-2{% endif %}">
       <h4 class="font-semibold text-rose-950">Restore SQLite DB</h4>
       <p class="mt-1 text-sm text-rose-900">This replaces the running database with the uploaded backup. Download the current SQLite DB first if you need to keep it. It restores the DB exactly as uploaded; anonymization can be run after recovery if needed.</p>
-      <form action="/admin/privacy/restore-db" method="post" enctype="multipart/form-data" class="mt-3 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto]">
+      <form action="/admin/privacy/restore-db" method="post" enctype="multipart/form-data" data-busy-form data-busy-text="Restoring…" class="mt-3 grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto]">
         <input name="db_file" type="file" accept=".db,application/octet-stream" required class="file-input file-input-bordered file-input-sm bg-white">
         <button class="btn btn-error btn-sm">Restore uploaded DB</button>
       </form>

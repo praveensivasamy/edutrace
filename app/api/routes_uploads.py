@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.core.auth import require_admin
 from app.core.constants import DEFAULT_ACADEMIC_YEAR, DEFAULT_CLASS_NAME, DEFAULT_SECTION
 from app.db.repositories.upload_repository import UploadRepository
 from app.db.session import get_db
@@ -12,7 +13,7 @@ from app.services.parse_service import ParseService
 from app.services.review_service import ReviewService
 from app.services.upload_service import UploadService
 
-router = APIRouter(prefix="/uploads", tags=["uploads"])
+router = APIRouter(prefix="/uploads", tags=["uploads"], dependencies=[Depends(require_admin)])
 templates = Jinja2Templates(directory="app/templates")
 
 
@@ -53,7 +54,7 @@ def review_upload(upload_id: int, request: Request, db: Annotated[Session, Depen
     return templates.TemplateResponse(
         request=request,
         name="review_upload.html",
-        context={"upload": upload, "parse_job": parse_job, "rows": rows},
+        context={"upload": upload, "parse_job": parse_job, "rows": rows, "is_admin": True},
     )
 
 
@@ -77,23 +78,19 @@ def approve_upload(
     if not UploadRepository(db).get_upload(upload_id):
         raise HTTPException(status_code=404, detail="Upload not found")
 
-    rows = []
-    for index, student in enumerate(student_name):
-        rows.append(
-            {
-                "academic_year": academic_year[index],
-                "class_name": class_name[index],
-                "section": section[index],
-                "exam_term": exam_term[index],
-                "exam_date": exam_date[index] or None,
-                "subject_name": subject_name[index],
-                "student_name": student,
-                "score": _optional_float(score[index]),
-                "max_marks": _required_float(max_marks[index], 100),
-                "absent_flag": absent_flag[index] or "N",
-                "remarks": remarks[index] or None,
-            }
-        )
+    rows = _approval_rows(
+        academic_year=academic_year,
+        class_name=class_name,
+        section=section,
+        exam_term=exam_term,
+        exam_date=exam_date,
+        subject_name=subject_name,
+        student_name=student_name,
+        score=score,
+        max_marks=max_marks,
+        absent_flag=absent_flag,
+        remarks=remarks,
+    )
     ReviewService(db).approve_candidates(upload_id, rows, set(selected_rows or []))
     return RedirectResponse(url="/", status_code=303)
 
@@ -136,6 +133,40 @@ def _optional_float(value: str) -> float | None:
 
 def _required_float(value: str, default: float) -> float:
     return float(value) if value else default
+
+
+def _approval_rows(
+    *,
+    academic_year: list[str],
+    class_name: list[str],
+    section: list[str],
+    exam_term: list[str],
+    exam_date: list[str],
+    subject_name: list[str],
+    student_name: list[str],
+    score: list[str],
+    max_marks: list[str],
+    absent_flag: list[str],
+    remarks: list[str],
+) -> list[dict]:
+    rows = []
+    for index, student in enumerate(student_name):
+        rows.append(
+            {
+                "academic_year": academic_year[index],
+                "class_name": class_name[index],
+                "section": section[index],
+                "exam_term": exam_term[index],
+                "exam_date": exam_date[index] or None,
+                "subject_name": subject_name[index],
+                "student_name": student,
+                "score": _optional_float(score[index]),
+                "max_marks": _required_float(max_marks[index], 100),
+                "absent_flag": absent_flag[index] or "N",
+                "remarks": remarks[index] or None,
+            }
+        )
+    return rows
 
 
 def _upload_result_html(result: dict) -> str:

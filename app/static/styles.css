@@ -60,6 +60,20 @@ body {
   font-weight: 700;
 }
 
+table.min-w-full thead th {
+  background: rgb(248 250 252);
+  color: rgb(30 41 59);
+  font-weight: 700;
+}
+
+table.min-w-full tbody tr:nth-child(even):not([class*="bg-"]) {
+  background: rgb(248 250 252 / 55%);
+}
+
+table.min-w-full tbody tr:hover:not([class*="bg-"]) {
+  background: rgb(241 245 249);
+}
+
 .nav-tab {
   border-radius: .65rem;
   color: white;
@@ -78,4 +92,35 @@ body {
 
 .nav-tab-idle {
   background: rgb(255 255 255 / 10%);
+}
+
+.htmx-indicator {
+  display: none;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  display: inline-flex;
+}
+
+.spinner {
+  animation: spin .75s linear infinite;
+  border: 2px solid rgb(148 163 184 / 35%);
+  border-radius: 9999px;
+  border-top-color: currentColor;
+  display: inline-block;
+  height: 1rem;
+  width: 1rem;
+}
+
+button:disabled,
+input[type="submit"]:disabled {
+  cursor: wait;
+  opacity: .75;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

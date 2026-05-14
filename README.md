@@ -6,11 +6,7 @@ It is designed for local PyCharm development first, with a clean path to Podman/
 
 ## Metrics
 
-![Python](https://img.shields.io/badge/python-3.14-blue)
-
-![Azure](https://img.shields.io/badge/Azure-Container%20Apps-blue)
-
-![Docker](https://img.shields.io/docker/image-size/praveensiva/edutrace/latest)
+![Python](https://img.shields.io/badge/python-3.14-blue) ![Azure](https://img.shields.io/badge/Azure-Container%20Apps-blue) ![Docker](https://img.shields.io/docker/image-size/praveensiva/edutrace/latest)
 
 [![Build Push and Deploy EduTrace](https://github.com/praveensivasamy/edutrace/actions/workflows/dockerhub-build.yml/badge.svg)](https://github.com/praveensivasamy/edutrace/actions/workflows/dockerhub-build.yml)
 ## Technical Features in this starter

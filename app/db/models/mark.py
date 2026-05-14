@@ -7,7 +7,12 @@ from app.db.base import Base
 class Mark(Base):
     __tablename__ = "marks"
     __table_args__ = (
-        UniqueConstraint("student_id", "subject_id", "exam_id", name="uq_mark_student_subject_exam"),
+        UniqueConstraint(
+            "student_id",
+            "subject_id",
+            "exam_id",
+            name="uq_mark_student_subject_exam",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)

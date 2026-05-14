@@ -7,7 +7,7 @@
     <div class="page-heading">
       <div>
         <h2>Consolidated Marks Dashboard</h2>
-        <p>Load an Excel/CSV marksheet, review extracted rows, then approve to update analytics.</p>
+        <p>Read-only analytics view of approved marks across classes, sections, and tests.</p>
       </div>
       <a href="/marks/export.csv" class="w-fit rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">Export CSV</a>
     </div>
@@ -54,36 +54,35 @@
   </div>
 
   <div class="panel">
-    <h3 class="font-semibold">Load marksheet</h3>
-    <form hx-post="/uploads/api" hx-encoding="multipart/form-data" hx-target="#upload-result" class="mt-3 space-y-3">
-      <input name="file" type="file" accept=".xlsx,.csv,.txt,.png,.jpg,.jpeg,.webp,.bmp" required class="w-full rounded-lg border p-2 text-sm">
-      <button class="w-full rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white">Upload and parse</button>
-    </form>
-    <div id="upload-result" class="mt-3 rounded-lg bg-slate-100 p-3 text-sm text-slate-700"></div>
-
-    <div class="mt-5 border-t pt-5">
-      <h3 class="font-semibold">Paste CSV</h3>
-      <form action="/uploads/paste" method="post" class="mt-3 space-y-3">
-        <textarea name="csv_text" required rows="6" class="w-full rounded-lg border p-2 font-mono text-xs" placeholder="S.NO,NAMES,SEC,LANG,Eng,Mat,TOTAL,%,RANK&#10;1,Asha,B,T,18,20,38,95,1"></textarea>
-        <button class="w-full rounded-lg bg-blue-700 px-4 py-2 font-semibold text-white">Preview table</button>
-      </form>
-    </div>
+    <h3 class="font-semibold">Data Management</h3>
+    <p class="mt-3 text-sm text-slate-600">Upload, parse, and manual CSV ingest are available only in the Admin Dashboard.</p>
+    {% if is_admin %}
+    <a href="/admin" class="mt-4 inline-flex rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Open Admin Dashboard</a>
+    {% endif %}
   </div>
 </section>
 
 <section class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
   <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
-    <h2 class="text-lg font-semibold">Subject Performance</h2>
+    <h2 class="text-lg font-semibold">Subject Performance (%)</h2>
     <canvas id="subjectChart" class="mt-4" height="100"></canvas>
   </div>
 
   <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-    <h2 class="text-lg font-semibold">Section Summary</h2>
+    <h2 class="text-lg font-semibold">Section Performance (%)</h2>
+    <canvas id="sectionChart" class="mt-3" height="110"></canvas>
     <div class="mt-4 space-y-3">
+      {% set top_section_pct = (section_summary | map(attribute='average_pct') | map('float') | max) if section_summary else None %}
       {% for section in section_summary %}
-      <div class="flex items-center justify-between rounded-lg border border-slate-200 p-3">
+      {% set is_top_section = top_section_pct is not none and ((section.average_pct | float) - top_section_pct) | abs < 0.001 %}
+      <div class="flex items-center justify-between rounded-lg border p-3 {% if is_top_section %}border-emerald-300 bg-emerald-50/60 ring-1 ring-emerald-200{% else %}border-slate-200{% endif %}">
         <div>
-          <div class="font-semibold">Section {{ section.section }}</div>
+          <div class="font-semibold">
+            Section {{ section.section }}
+            {% if is_top_section %}
+            <span class="ml-2 rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">Top performer</span>
+            {% endif %}
+          </div>
           <div class="text-xs text-slate-500">{{ section.students }} students</div>
         </div>
         <div class="text-lg font-semibold">{{ section.average_pct }}%</div>
@@ -95,38 +94,9 @@
   </div>
 </section>
 
-<section class="mt-6 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-  <h2 class="text-lg font-semibold">Subject Toppers by Test</h2>
-  <div class="mt-4 space-y-5">
-    {% for group in subject_toppers %}
-    <div class="rounded-lg border border-slate-200">
-      <div class="border-b bg-slate-50 px-4 py-3">
-        <h3 class="font-semibold">{{ group.exam_display_name }}</h3>
-      </div>
-      <div class="divide-y divide-slate-200">
-        {% for topper in group.subjects %}
-        <div class="grid grid-cols-1 gap-3 px-4 py-3 lg:grid-cols-[160px_120px_80px_1fr] lg:items-center">
-          <div class="font-medium">{{ topper.subject_display_name }}</div>
-          <div class="text-sm text-slate-700">{{ topper.score }} / {{ topper.max_marks }}</div>
-          <div class="text-sm font-semibold text-slate-900">{{ topper.percentage }}%</div>
-          <div class="flex flex-wrap gap-2">
-            {% for student in topper.students %}
-            <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800 ring-1 ring-blue-200">{{ student }}</span>
-            {% endfor %}
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% else %}
-    <div class="rounded-lg border border-slate-200 p-6 text-center text-slate-500">No approved marks yet.</div>
-    {% endfor %}
-  </div>
-</section>
-
 <section class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
   <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-    <h2 class="text-lg font-semibold">Top Students</h2>
+    <h2 class="text-lg font-semibold">Student Leaderboard</h2>
     <div class="mt-4 overflow-auto rounded-lg border border-slate-200">
       <table class="min-w-full border-collapse text-sm">
         <thead class="bg-slate-50">
@@ -139,10 +109,17 @@
           </tr>
         </thead>
         <tbody>
+          {% set top_student_pct = (student_rankings | map(attribute='percentage') | map('float') | max) if student_rankings else None %}
           {% for student in student_rankings %}
-          <tr class="hover:bg-slate-50">
+          {% set is_top_student = top_student_pct is not none and ((student.percentage | float) - top_student_pct) | abs < 0.001 %}
+          <tr class="{% if is_top_student %}bg-emerald-50/60 ring-1 ring-emerald-200{% else %}hover:bg-slate-50{% endif %}">
             <td class="border-b p-3">{{ loop.index }}</td>
-            <td class="border-b p-3 font-medium">{{ student.student_name }}</td>
+            <td class="border-b p-3 font-medium">
+              {{ student.student_name }}
+              {% if is_top_student %}
+              <span class="ml-2 rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">Top performer</span>
+              {% endif %}
+            </td>
             <td class="border-b p-3">{{ student.section }}</td>
             <td class="border-b p-3 text-right">{{ student.score }} / {{ student.max_marks }}</td>
             <td class="border-b p-3 text-right">{{ student.percentage }}</td>
@@ -156,15 +133,16 @@
   </div>
 
   <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-    <h2 class="text-lg font-semibold">Subject Details</h2>
+    <h2 class="text-lg font-semibold">Subject Score Snapshot (%)</h2>
+    <p class="mt-1 text-sm text-slate-600">Use this table to compare each subject's average performance and score spread.</p>
     <div class="mt-4 overflow-auto rounded-lg border border-slate-200">
       <table class="min-w-full border-collapse text-sm">
         <thead class="bg-slate-50">
           <tr>
             <th class="border-b p-3 text-left">Subject</th>
-            <th class="border-b p-3 text-right">Average</th>
-            <th class="border-b p-3 text-right">Highest</th>
-            <th class="border-b p-3 text-right">Lowest</th>
+            <th class="border-b p-3 text-right">Average %</th>
+            <th class="border-b p-3 text-right">Highest %</th>
+            <th class="border-b p-3 text-right">Lowest %</th>
           </tr>
         </thead>
         <tbody>
@@ -184,32 +162,76 @@
   </div>
 </section>
 
+<section class="mt-6 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+  <h2 class="text-lg font-semibold">Subject Toppers by Test</h2>
+  <div class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
+    Click to expand each test and view subject-wise topper scores and names.
+  </div>
+  <div class="mt-4 space-y-3">
+    {% for group in subject_toppers %}
+    <details class="rounded-lg border border-slate-200">
+      <summary class="cursor-pointer list-none px-4 py-3">
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="font-semibold">{{ group.exam_display_name }}</h3>
+          <span class="text-xs text-slate-500">{{ group.subjects|length }} subjects</span>
+        </div>
+      </summary>
+      <div class="divide-y divide-slate-200 border-t">
+        {% for topper in group.subjects %}
+        <div class="grid grid-cols-1 gap-3 px-4 py-3 lg:grid-cols-[160px_120px_80px_1fr] lg:items-center">
+          <div class="font-medium">{{ topper.subject_display_name }}</div>
+          <div class="text-sm text-slate-700">{{ topper.score }} / {{ topper.max_marks }}</div>
+          <div class="text-sm font-semibold text-slate-900">{{ topper.percentage }}%</div>
+          <div class="flex flex-wrap gap-2">
+            {% for student in topper.students %}
+            <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800 ring-1 ring-blue-200">{{ student }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% else %}
+    <div class="rounded-lg border border-slate-200 p-6 text-center text-slate-500">No approved marks yet.</div>
+    {% endfor %}
+  </div>
+</section>
+
 <script>
   const subjectSummary = {{ subject_summary | tojson }};
-  const subjectChart = document.getElementById('subjectChart');
-  new Chart(subjectChart, {
-    type: 'bar',
-    data: {
-      labels: subjectSummary.map(item => item.subject_display_name),
-      datasets: [
-        {
-          label: 'Average %',
-          data: subjectSummary.map(item => item.average_pct),
-          backgroundColor: '#2563eb'
-        },
-        {
-          label: 'Lowest %',
-          data: subjectSummary.map(item => item.lowest_pct),
-          backgroundColor: '#f59e0b'
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      scales: {
-        y: { beginAtZero: true, max: 100 }
-      }
-    }
+  const sectionSummary = {{ section_summary | tojson }};
+  const sectionValues = sectionSummary.map(item => Number(item.average_pct ?? 0));
+  const sectionMin = Math.min(...sectionValues, 0);
+  const sectionMax = Math.max(...sectionValues, 100);
+  const sectionRange = Math.max(sectionMax - sectionMin, 1);
+  const topSectionValue = sectionValues.length ? Math.max(...sectionValues) : 0;
+  const sectionColors = sectionValues.map(value => {
+    const t = (value - sectionMin) / sectionRange;
+    const hue = 8 + (t * 132); // red -> amber -> green
+    return `hsl(${hue} 78% 48%)`;
   });
+  const isTopSectionValue = value => Math.abs(value - topSectionValue) < 0.001;
+  const sectionBorderColors = sectionValues.map(value => isTopSectionValue(value) ? '#166534' : '#334155');
+  const sectionBorderWidths = sectionValues.map(value => isTopSectionValue(value) ? 3 : 1);
+  window.EduTraceCharts.createBarChart('subjectChart', subjectSummary.map(item => item.subject_display_name), [
+    {
+      label: 'Average %',
+      data: subjectSummary.map(item => item.average_pct)
+    },
+    {
+      label: 'Lowest %',
+      data: subjectSummary.map(item => item.lowest_pct)
+    }
+  ], { variant: 'academic', max: 100 });
+
+  window.EduTraceCharts.createBarChart('sectionChart', sectionSummary.map(item => `Section ${item.section}`), [
+    {
+      label: 'Average %',
+      data: sectionValues,
+      backgroundColor: sectionColors,
+      borderColor: sectionBorderColors,
+      borderWidth: sectionBorderWidths
+    }
+  ], { variant: 'compare', max: 100 });
 </script>
 {% endblock %}

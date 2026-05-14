@@ -1,4 +1,4 @@
-from app.db.session import (
+from app.db.bootstrap import (
     consolidate_exam_scope,
     ensure_display_name_columns,
     remove_exam_class_section_columns,

@@ -7,12 +7,14 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Resp
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.core.auth import require_admin
+from app.db.bootstrap import init_db
 from app.db.repositories.mark_repository import MarkRepository
-from app.db.session import engine, get_db, init_db
+from app.db.session import engine, get_db
 from app.services.admin_service import AdminService
 from app.services.privacy_service import PrivacyService, clear_reveal_key
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 templates = Jinja2Templates(directory="app/templates")
 
 
@@ -32,6 +34,7 @@ def admin_dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
             "exam_dates": service.exam_date_options(),
             "exam_display_names": MarkRepository(db).list_exam_display_names(),
             "subject_display_names": MarkRepository(db).list_subject_display_names(),
+            "is_admin": True,
         },
     )
 
@@ -49,7 +52,7 @@ def exam_dates_fragment(request: Request, db: Annotated[Session, Depends(get_db)
     return templates.TemplateResponse(
         request=request,
         name="_exam_dates_panel.html",
-        context={"exam_dates": AdminService(db).exam_date_options()},
+        context={"exam_dates": AdminService(db).exam_date_options(), "is_admin": True},
     )
 
 
@@ -58,7 +61,7 @@ def display_names_fragment(request: Request, db: Annotated[Session, Depends(get_
     return templates.TemplateResponse(
         request=request,
         name="_display_names_panel.html",
-        context=_display_name_context(db),
+        context={**_display_name_context(db), "is_admin": True},
     )
 
 
@@ -67,7 +70,7 @@ def privacy_fragment(request: Request, db: Annotated[Session, Depends(get_db)]):
     return templates.TemplateResponse(
         request=request,
         name="_privacy_panel.html",
-        context={"privacy": PrivacyService(db).status()},
+        context={"privacy": PrivacyService(db).status(), "is_admin": True},
     )
 
 
@@ -76,7 +79,7 @@ def privacy_dashboard(request: Request, db: Annotated[Session, Depends(get_db)])
     return templates.TemplateResponse(
         request=request,
         name="privacy_dashboard.html",
-        context={"privacy": PrivacyService(db).status()},
+        context={"privacy": PrivacyService(db).status(), "is_admin": True},
     )
 
 
@@ -116,7 +119,7 @@ def update_exam_date(
         return templates.TemplateResponse(
             request=request,
             name="_exam_dates_panel.html",
-            context={"exam_dates": AdminService(db).exam_date_options()},
+            context={"exam_dates": AdminService(db).exam_date_options(), "is_admin": True},
         )
     return RedirectResponse(url="/admin", status_code=303)
 
@@ -134,7 +137,7 @@ def update_exam_display_name(
         return templates.TemplateResponse(
             request=request,
             name="_display_names_panel.html",
-            context=_display_name_context(db),
+            context={**_display_name_context(db), "is_admin": True},
         )
     return RedirectResponse(url="/admin", status_code=303)
 
@@ -152,7 +155,7 @@ def update_subject_display_name(
         return templates.TemplateResponse(
             request=request,
             name="_display_names_panel.html",
-            context=_display_name_context(db),
+            context={**_display_name_context(db), "is_admin": True},
         )
     return RedirectResponse(url="/admin", status_code=303)
 
@@ -192,7 +195,7 @@ async def load_student_reveal_key(
         return templates.TemplateResponse(
             request=request,
             name="_privacy_panel.html",
-            context={"privacy": PrivacyService(db).status()},
+            context={"privacy": PrivacyService(db).status(), "is_admin": True},
         )
     return RedirectResponse(url="/admin/privacy", status_code=303)
 
@@ -205,7 +208,7 @@ def clear_student_reveal_key(request: Request, db: Annotated[Session, Depends(ge
         return templates.TemplateResponse(
             request=request,
             name="_privacy_panel.html",
-            context={"privacy": PrivacyService(db).status()},
+            context={"privacy": PrivacyService(db).status(), "is_admin": True},
         )
     return RedirectResponse(url="/admin/privacy", status_code=303)
 
@@ -248,7 +251,7 @@ async def restore_database_backup(db_file: Annotated[UploadFile, File()]):
         engine.dispose()
         PrivacyService.restore_database(content, db_file.filename)
         engine.dispose()
-        init_db()
+        init_db(engine)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return RedirectResponse(url="/admin/privacy", status_code=303)

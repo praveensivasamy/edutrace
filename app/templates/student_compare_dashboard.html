@@ -1,23 +1,37 @@
 {% extends "base.html" %}
-{% block title %}Student Compare{% endblock %}
+{% block title %}Drilldown Student Performance{% endblock %}
 
 {% block content %}
 <section class="page-heading">
   <div>
-    <h2>Student Comparison</h2>
+    <h2>Drilldown Student Performance</h2>
     <p>Compare selected students by test and subject using score percentage and class rank.</p>
   </div>
 </section>
 
 <section class="panel mt-5">
-  <form method="get" action="/dashboards/student-compare" class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+  <form method="get" action="/dashboards/student-compare" data-busy-form data-busy-text="Comparing…" class="grid grid-cols-1 gap-4 lg:grid-cols-3">
     <div>
       <label class="text-sm font-semibold text-slate-700">Students</label>
-      <select name="student" multiple size="10" class="mt-2 w-full rounded-lg border p-2 text-sm">
+      <p class="mt-1 text-xs text-slate-500">Add up to {{ max_compare_students }} students.</p>
+      <div class="mt-2 flex gap-2">
+        <input id="student-search-input" list="student-options-list" class="w-full rounded-lg border p-2 text-sm" placeholder="Type a student name">
+        <button id="add-student-btn" type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">Add</button>
+      </div>
+      <datalist id="student-options-list">
         {% for value in student_options %}
-        <option value="{{ value }}" {% if value in selected_students %}selected{% endif %}>{{ value }}</option>
+        <option value="{{ value }}"></option>
         {% endfor %}
-      </select>
+      </datalist>
+      <div class="mt-3 flex items-center justify-between">
+        <div class="text-xs text-slate-500"><span id="selected-student-count">0</span> / {{ max_compare_students }} selected</div>
+        <button id="clear-students-btn" type="button" class="rounded border px-2 py-1 text-xs">Clear</button>
+      </div>
+      <div id="selected-students" class="mt-2 flex flex-wrap gap-2"></div>
+      <div id="selected-students-hidden"></div>
+      {% if compare_notice %}
+      <p class="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{{ compare_notice }}</p>
+      {% endif %}
     </div>
     <div>
       <label class="text-sm font-semibold text-slate-700">Tests</label>
@@ -109,28 +123,103 @@
   </div>
 </section>
 
+{% endif %}
 <script>
   const comparisons = {{ comparisons | tojson }};
   const selectedStudents = {{ selected_students | tojson }};
-  const labels = comparisons.map(item => `${item.exam_display_name} - ${item.subject_display_name}`);
-  const palette = ['#2563eb', '#f59e0b', '#059669', '#dc2626', '#7c3aed', '#0891b2'];
-  const datasets = selectedStudents.map((student, index) => ({
-    label: student,
-    data: comparisons.map(item => {
-      const match = item.students.find(row => row.student_name === student);
-      return match ? match.percentage : null;
-    }),
-    backgroundColor: palette[index % palette.length]
-  }));
+  const maxCompareStudents = {{ max_compare_students }};
+  const knownStudents = {{ student_options | tojson }};
 
-  new Chart(document.getElementById('studentCompareChart'), {
-    type: 'bar',
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      scales: { y: { beginAtZero: true, max: 100 } }
+  if (document.getElementById('studentCompareChart')) {
+    const labels = comparisons.map(item => `${item.exam_display_name} - ${item.subject_display_name}`);
+    const datasets = selectedStudents.map(student => ({
+      label: student,
+      data: comparisons.map(item => {
+        const match = item.students.find(row => row.student_name === student);
+        return match ? match.percentage : null;
+      })
+    }));
+    window.EduTraceCharts.createBarChart('studentCompareChart', labels, datasets, { variant: 'compare', max: 100 });
+  }
+
+  const selectedStudentsContainer = document.getElementById('selected-students');
+  const selectedStudentsHidden = document.getElementById('selected-students-hidden');
+  const selectedStudentCount = document.getElementById('selected-student-count');
+  const studentSearchInput = document.getElementById('student-search-input');
+  const addStudentButton = document.getElementById('add-student-btn');
+  const clearStudentsButton = document.getElementById('clear-students-btn');
+
+  function normalizeStudent(name) {
+    return (name || '').trim();
+  }
+
+  function currentStudents() {
+    return Array.from(selectedStudentsHidden.querySelectorAll('input[name="student"]')).map(input => input.value);
+  }
+
+  function renderStudentCount() {
+    selectedStudentCount.textContent = String(currentStudents().length);
+    addStudentButton.disabled = currentStudents().length >= maxCompareStudents;
+  }
+
+  function addStudentChip(name) {
+    const value = normalizeStudent(name);
+    if (!value) return;
+    if (!knownStudents.includes(value)) return;
+    if (currentStudents().includes(value)) return;
+    if (currentStudents().length >= maxCompareStudents) return;
+
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800 ring-1 ring-blue-200';
+    chip.dataset.studentChip = value;
+    chip.innerHTML = `<span>${value}</span><span aria-hidden="true">×</span>`;
+    selectedStudentsContainer.appendChild(chip);
+
+    const hiddenInput = document.createElement('input');
+    hiddenInput.type = 'hidden';
+    hiddenInput.name = 'student';
+    hiddenInput.value = value;
+    hiddenInput.dataset.studentHidden = value;
+    selectedStudentsHidden.appendChild(hiddenInput);
+
+    renderStudentCount();
+  }
+
+  function removeStudentChip(name) {
+    const chip = selectedStudentsContainer.querySelector(`[data-student-chip="${CSS.escape(name)}"]`);
+    if (chip) chip.remove();
+    const hidden = selectedStudentsHidden.querySelector(`[data-student-hidden="${CSS.escape(name)}"]`);
+    if (hidden) hidden.remove();
+    renderStudentCount();
+  }
+
+  selectedStudents.forEach(addStudentChip);
+  renderStudentCount();
+
+  addStudentButton.addEventListener('click', () => {
+    addStudentChip(studentSearchInput.value);
+    studentSearchInput.value = '';
+    studentSearchInput.focus();
+  });
+
+  studentSearchInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      addStudentButton.click();
     }
   });
+
+  clearStudentsButton.addEventListener('click', () => {
+    selectedStudentsContainer.innerHTML = '';
+    selectedStudentsHidden.innerHTML = '';
+    renderStudentCount();
+  });
+
+  selectedStudentsContainer.addEventListener('click', event => {
+    const chip = event.target.closest('[data-student-chip]');
+    if (!chip) return;
+    removeStudentChip(chip.dataset.studentChip);
+  });
 </script>
-{% endif %}
 {% endblock %}

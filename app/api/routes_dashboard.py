@@ -5,20 +5,23 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.core.auth import CurrentUser, get_current_user
 from app.core.config import get_settings
 from app.db.repositories.mark_repository import MarkRepository
 from app.db.session import get_db
 from app.services.analytics_service import AnalyticsService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 templates = Jinja2Templates(directory="app/templates")
 TARGET_STUDENT_LABEL = "Target Student"
+MAX_COMPARE_STUDENTS = 10
 
 
 @router.get("/", response_class=HTMLResponse)
 def dashboard(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
+    user: Annotated[CurrentUser, Depends(get_current_user)],
     academic_year: str = "",
     class_name: str = "",
     section: str = "",
@@ -32,20 +35,21 @@ def dashboard(
         "exam_term": exam_term,
     }
     rows = repo.list_marks(filters)
-    summary = AnalyticsService.summary(rows)
+    overview = AnalyticsService.dashboard_overview(rows)
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
         context={
-            "summary": summary,
+            "summary": overview["summary"],
             "rows": rows,
             "trend": AnalyticsService.subject_trend(rows),
-            "student_rankings": AnalyticsService.student_rankings(rows),
-            "subject_summary": AnalyticsService.subject_summary(rows),
-            "subject_toppers": AnalyticsService.grouped_subject_toppers_by_test(rows),
-            "section_summary": AnalyticsService.section_summary(rows),
+            "student_rankings": overview["student_rankings"],
+            "subject_summary": overview["subject_summary"],
+            "subject_toppers": overview["subject_toppers"],
+            "section_summary": overview["section_summary"],
             "available_filters": repo.available_filters(),
             "selected_filters": filters,
+            "is_admin": user.is_admin,
         },
     )
 
@@ -54,6 +58,7 @@ def dashboard(
 def target_dashboard(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
+    user: Annotated[CurrentUser, Depends(get_current_user)],
     exam_term: Annotated[list[str] | None, Query()] = None,
     subject: Annotated[list[str] | None, Query()] = None,
     ordered_exam_term: Annotated[list[str] | None, Query()] = None,
@@ -101,6 +106,7 @@ def target_dashboard(
                 ),
                 None,
             ),
+            "is_admin": user.is_admin,
         },
     )
 
@@ -109,12 +115,23 @@ def target_dashboard(
 def student_compare_dashboard(
     request: Request,
     db: Annotated[Session, Depends(get_db)],
+    user: Annotated[CurrentUser, Depends(get_current_user)],
     student: Annotated[list[str] | None, Query()] = None,
     exam_term: Annotated[list[str] | None, Query()] = None,
     subject: Annotated[list[str] | None, Query()] = None,
 ):
     rows = MarkRepository(db).list_marks()
-    selected_students = student or []
+    raw_students = student or []
+    selected_students = []
+    seen_students = set()
+    for value in raw_students:
+        if value and value not in seen_students:
+            seen_students.add(value)
+            selected_students.append(value)
+    compare_notice = ""
+    if len(selected_students) > MAX_COMPARE_STUDENTS:
+        selected_students = selected_students[:MAX_COMPARE_STUDENTS]
+        compare_notice = f"Maximum {MAX_COMPARE_STUDENTS} students can be compared at once. Extra selections were ignored."
     selected_exam_terms = exam_term or []
     selected_subjects = subject or []
     options = AnalyticsService.analysis_options(rows)
@@ -137,6 +154,9 @@ def student_compare_dashboard(
             "comparisons": comparisons,
             "grouped_comparisons": grouped_comparisons,
             "has_selection": len(selected_students) >= 2,
+            "max_compare_students": MAX_COMPARE_STUDENTS,
+            "compare_notice": compare_notice,
+            "is_admin": user.is_admin,
         },
     )
 
@@ -222,15 +242,29 @@ def _display_rows(rows: list[dict], privacy_enabled: bool) -> list[dict]:
 
 
 @router.get("/dashboards/approved-marks", response_class=HTMLResponse)
-def approved_marks_dashboard(request: Request, db: Annotated[Session, Depends(get_db)]):
+def approved_marks_dashboard(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+    page: int = 1,
+    page_size: int = 50,
+):
     repo = MarkRepository(db)
-    rows = repo.list_marks()
+    marks_page = repo.list_marks_page(page=page, page_size=page_size)
+    rows = marks_page.items
+    template_name = (
+        "_approved_marks_table.html"
+        if request.headers.get("hx-request")
+        else "approved_marks_dashboard.html"
+    )
     return templates.TemplateResponse(
         request=request,
-        name="approved_marks_dashboard.html",
+        name=template_name,
         context={
             "rows": rows,
             "grouped_rows": AnalyticsService.group_by_test(rows),
             "summary": AnalyticsService.summary(rows),
+            "marks_page": marks_page,
+            "is_admin": user.is_admin,
         },
     )

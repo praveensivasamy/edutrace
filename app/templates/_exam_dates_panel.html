@@ -1,16 +1,16 @@
 <section id="exam-dates-panel" class="panel mt-6">
   <h3>Exam Dates</h3>
   <p class="mt-1 text-sm text-slate-600">Review the default held/start date per academic year and test type. Saving here updates staged upload rows before approval and approved exams where they already exist.</p>
-  <div class="mt-4 overflow-auto rounded-lg border border-slate-200">
+  <div class="mt-4 max-h-[460px] overflow-auto rounded-lg border border-slate-200">
     <table class="min-w-full border-collapse text-sm">
       <thead class="bg-slate-50">
         <tr>
-          <th class="border-b p-3 text-left">Academic Year</th>
-          <th class="border-b p-3 text-left">Test Type</th>
-          <th class="border-b p-3 text-left">Default Held / Start Date</th>
-          <th class="border-b p-3 text-left">Source</th>
-          <th class="border-b p-3 text-right">Rows</th>
-          <th class="border-b p-3 text-left">Action</th>
+          <th class="sticky top-0 z-10 border-b bg-slate-50 p-3 text-left">Academic Year</th>
+          <th class="sticky top-0 z-10 border-b bg-slate-50 p-3 text-left">Test Type</th>
+          <th class="sticky top-0 z-10 border-b bg-slate-50 p-3 text-left">Default Held / Start Date</th>
+          <th class="sticky top-0 z-10 border-b bg-slate-50 p-3 text-left">Source</th>
+          <th class="sticky top-0 z-10 border-b bg-slate-50 p-3 text-right">Rows</th>
+          <th class="sticky top-0 z-10 border-b bg-slate-50 p-3 text-left">Action</th>
         </tr>
       </thead>
       <tbody>
@@ -37,11 +37,18 @@
               hx-post="/admin/exam-dates"
               hx-target="#exam-dates-panel"
               hx-swap="outerHTML"
+              hx-indicator="#exam-date-loading-{{ loop.index }}"
             >
               <input type="hidden" name="academic_year" value="{{ exam.academic_year }}">
               <input type="hidden" name="exam_term" value="{{ exam.exam_term }}">
             </form>
-            <button form="{{ form_id }}" class="btn btn-primary btn-sm">Approve date</button>
+            <div class="flex items-center gap-2">
+              <button form="{{ form_id }}" class="btn btn-primary btn-sm">Approve date</button>
+              <div id="exam-date-loading-{{ loop.index }}" class="htmx-indicator inline-flex items-center gap-2 text-xs text-slate-600">
+                <span class="spinner"></span>
+                <span>Saving…</span>
+              </div>
+            </div>
           </td>
         </tr>
         {% else %}

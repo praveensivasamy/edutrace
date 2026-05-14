@@ -7,7 +7,13 @@ from app.db.base import Base
 class Student(Base):
     __tablename__ = "students"
     __table_args__ = (
-        UniqueConstraint("student_name", "class_name", "section", "academic_year", name="uq_student_scope"),
+        UniqueConstraint(
+            "student_name",
+            "class_name",
+            "section",
+            "academic_year",
+            name="uq_student_scope",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)

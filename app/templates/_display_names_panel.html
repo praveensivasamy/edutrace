@@ -2,56 +2,102 @@
   <div class="panel">
     <h3>Test Display Names</h3>
     <p class="mt-1 text-sm text-slate-600">Keep imported test names stable and set the shorter label shown in dashboards.</p>
-    <div class="mt-4 space-y-3">
-      {% for exam in exam_display_names %}
-      {% set form_id = 'exam-display-' ~ exam.id %}
-      <div class="rounded-lg border border-slate-200 p-3">
-        <div class="text-xs font-semibold uppercase text-slate-500">{{ exam.academic_year }} · {{ exam.exam_term }}</div>
-        <form
-          id="{{ form_id }}"
-          action="/admin/display-names/exams"
-          method="post"
-          hx-post="/admin/display-names/exams"
-          hx-target="#display-names-panel"
-          hx-swap="outerHTML"
-          class="mt-2 grid grid-cols-[1fr_auto] gap-2"
-        >
-          <input type="hidden" name="exam_id" value="{{ exam.id }}">
-          <input name="display_name" value="{{ exam.display_name }}" placeholder="{{ exam.exam_term }}" class="input input-bordered input-sm">
-          <button class="btn btn-primary btn-sm">Save</button>
-        </form>
-      </div>
-      {% else %}
-      <div class="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">No exams yet.</div>
-      {% endfor %}
+    <div class="mt-4 max-h-[460px] overflow-auto rounded-lg border border-slate-200">
+      <table class="min-w-full border-collapse text-sm">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="sticky top-0 z-10 border-b bg-slate-50 p-3 text-left">Academic Year</th>
+            <th class="sticky top-0 z-10 border-b bg-slate-50 p-3 text-left">Test Type</th>
+            <th class="sticky top-0 z-10 border-b bg-slate-50 p-3 text-left">Display Name</th>
+            <th class="sticky top-0 z-10 border-b bg-slate-50 p-3 text-left">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for exam in exam_display_names %}
+          {% set form_id = 'exam-display-' ~ exam.id %}
+          <tr class="hover:bg-slate-50">
+            <td class="border-b p-3">{{ exam.academic_year }}</td>
+            <td class="border-b p-3 font-medium">{{ exam.exam_term }}</td>
+            <td class="border-b p-3">
+              <input form="{{ form_id }}" name="display_name" value="{{ exam.display_name }}" placeholder="{{ exam.exam_term }}" class="input input-bordered input-sm w-full">
+            </td>
+            <td class="border-b p-3">
+              <form
+                id="{{ form_id }}"
+                action="/admin/display-names/exams"
+                method="post"
+                hx-post="/admin/display-names/exams"
+                hx-target="#display-names-panel"
+                hx-swap="outerHTML"
+                hx-indicator="#exam-display-loading-{{ exam.id }}"
+                class="inline-flex items-center gap-2"
+              >
+                <input type="hidden" name="exam_id" value="{{ exam.id }}">
+                <button class="btn btn-primary btn-sm">Save</button>
+                <span id="exam-display-loading-{{ exam.id }}" class="htmx-indicator inline-flex items-center gap-2 text-xs text-slate-600">
+                  <span class="spinner"></span>
+                  <span>Saving…</span>
+                </span>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="4" class="p-6 text-center text-slate-500">No exams yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 
   <div class="panel">
     <h3>Subject Display Names</h3>
     <p class="mt-1 text-sm text-slate-600">Set readable subject labels without changing imported subject keys.</p>
-    <div class="mt-4 space-y-3">
-      {% for subject in subject_display_names %}
-      {% set form_id = 'subject-display-' ~ subject.id %}
-      <div class="rounded-lg border border-slate-200 p-3">
-        <div class="text-xs font-semibold uppercase text-slate-500">{{ subject.subject_name }}</div>
-        <form
-          id="{{ form_id }}"
-          action="/admin/display-names/subjects"
-          method="post"
-          hx-post="/admin/display-names/subjects"
-          hx-target="#display-names-panel"
-          hx-swap="outerHTML"
-          class="mt-2 grid grid-cols-[1fr_auto] gap-2"
-        >
-          <input type="hidden" name="subject_id" value="{{ subject.id }}">
-          <input name="display_name" value="{{ subject.display_name }}" placeholder="{{ subject.subject_name }}" class="input input-bordered input-sm">
-          <button class="btn btn-primary btn-sm">Save</button>
-        </form>
-      </div>
-      {% else %}
-      <div class="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">No subjects yet.</div>
-      {% endfor %}
+    <div class="mt-4 max-h-[460px] overflow-auto rounded-lg border border-slate-200">
+      <table class="min-w-full border-collapse text-sm">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="sticky top-0 z-10 border-b bg-slate-50 p-3 text-left">Subject Key</th>
+            <th class="sticky top-0 z-10 border-b bg-slate-50 p-3 text-left">Display Name</th>
+            <th class="sticky top-0 z-10 border-b bg-slate-50 p-3 text-left">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for subject in subject_display_names %}
+          {% set form_id = 'subject-display-' ~ subject.id %}
+          <tr class="hover:bg-slate-50">
+            <td class="border-b p-3 font-medium">{{ subject.subject_name }}</td>
+            <td class="border-b p-3">
+              <input form="{{ form_id }}" name="display_name" value="{{ subject.display_name }}" placeholder="{{ subject.subject_name }}" class="input input-bordered input-sm w-full">
+            </td>
+            <td class="border-b p-3">
+              <form
+                id="{{ form_id }}"
+                action="/admin/display-names/subjects"
+                method="post"
+                hx-post="/admin/display-names/subjects"
+                hx-target="#display-names-panel"
+                hx-swap="outerHTML"
+                hx-indicator="#subject-display-loading-{{ subject.id }}"
+                class="inline-flex items-center gap-2"
+              >
+                <input type="hidden" name="subject_id" value="{{ subject.id }}">
+                <button class="btn btn-primary btn-sm">Save</button>
+                <span id="subject-display-loading-{{ subject.id }}" class="htmx-indicator inline-flex items-center gap-2 text-xs text-slate-600">
+                  <span class="spinner"></span>
+                  <span>Saving…</span>
+                </span>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="3" class="p-6 text-center text-slate-500">No subjects yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 </section>

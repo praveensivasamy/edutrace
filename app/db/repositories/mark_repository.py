@@ -1,6 +1,9 @@
+from collections.abc import Sequence
+
 from sqlalchemy import Select, func, select, update
 from sqlalchemy.orm import Session
 
+from app.core.pagination import Page
 from app.db.models.exam import Exam
 from app.db.models.mark import Mark
 from app.db.models.student import Student
@@ -202,13 +205,54 @@ class MarkRepository:
         return mark
 
     def list_marks(self, filters: dict[str, str] | None = None) -> list[dict]:
+        stmt = self._mark_query(filters)
+        return self._rows_from_result(self.db.execute(stmt).all())
+
+    def list_marks_page(
+        self,
+        filters: dict[str, str] | None = None,
+        *,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> Page[dict]:
+        safe_page = max(1, page)
+        safe_page_size = max(1, min(page_size, 200))
+        stmt = self._mark_query(filters)
+        total_items = self.count_marks(filters)
+        paged_stmt = stmt.offset((safe_page - 1) * safe_page_size).limit(safe_page_size)
+        rows = self._rows_from_result(self.db.execute(paged_stmt).all())
+        return Page(
+            items=rows,
+            page=safe_page,
+            page_size=safe_page_size,
+            total_items=total_items,
+        )
+
+    def count_marks(self, filters: dict[str, str] | None = None) -> int:
+        stmt = self._mark_query(filters, order_by=False).with_only_columns(
+            func.count(Mark.id),
+            maintain_column_froms=True,
+        )
+        return int(self.db.scalar(stmt) or 0)
+
+    def _mark_query(
+        self,
+        filters: dict[str, str] | None = None,
+        *,
+        order_by: bool = True,
+    ) -> Select:
         stmt: Select = (
             select(Mark, Student, Subject, Exam)
             .join(Student, Mark.student_id == Student.id)
             .join(Subject, Mark.subject_id == Subject.id)
             .join(Exam, Mark.exam_id == Exam.id)
         )
-        filters = filters or {}
+        stmt = self._apply_mark_filters(stmt, filters or {})
+        if order_by:
+            stmt = stmt.order_by(Student.student_name, Subject.subject_name, Exam.exam_term)
+        return stmt
+
+    def _apply_mark_filters(self, stmt: Select, filters: dict[str, str]) -> Select:
         if filters.get("academic_year"):
             stmt = stmt.where(Exam.academic_year == filters["academic_year"])
         if filters.get("class_name"):
@@ -221,37 +265,40 @@ class MarkRepository:
             stmt = stmt.where(Student.student_name.ilike(f"%{filters['student_name']}%"))
         if filters.get("subject_name"):
             stmt = stmt.where(Subject.subject_name == filters["subject_name"])
-        stmt = stmt.order_by(Student.student_name, Subject.subject_name, Exam.exam_term)
+        return stmt
 
-        result = self.db.execute(stmt).all()
-        rows = []
-        for mark, student, subject, exam in result:
-            percentage = None
-            if mark.score is not None and mark.max_marks:
-                percentage = round((mark.score / mark.max_marks) * 100, 1)
-            rows.append(
-                {
-                    "id": mark.id,
-                    "academic_year": exam.academic_year,
-                    "class_name": student.class_name,
-                    "section": student.section,
-                    "exam_term": exam.exam_term,
-                    "exam_display_name": exam.display_name or exam.exam_term,
-                    "exam_date": exam.exam_date,
-                    "subject_name": subject.subject_name,
-                    "subject_display_name": subject.display_name or subject.subject_name,
-                    "student_name": PrivacyService.display_name(
-                        self.format_student_name(student.student_name)
-                    ),
-                    "student_key": self.format_student_name(student.student_name),
-                    "score": mark.score,
-                    "max_marks": mark.max_marks,
-                    "percentage": percentage,
-                    "absent_flag": mark.absent_flag,
-                    "remarks": mark.remarks,
-                }
-            )
-        return rows
+    def _rows_from_result(
+        self,
+        result: Sequence[tuple[Mark, Student, Subject, Exam]],
+    ) -> list[dict]:
+        return [
+            self._mark_row(mark, student, subject, exam)
+            for mark, student, subject, exam in result
+        ]
+
+    def _mark_row(self, mark: Mark, student: Student, subject: Subject, exam: Exam) -> dict:
+        normalized_name = self.format_student_name(student.student_name)
+        percentage = None
+        if mark.score is not None and mark.max_marks:
+            percentage = round((mark.score / mark.max_marks) * 100, 1)
+        return {
+            "id": mark.id,
+            "academic_year": exam.academic_year,
+            "class_name": student.class_name,
+            "section": student.section,
+            "exam_term": exam.exam_term,
+            "exam_display_name": exam.display_name or exam.exam_term,
+            "exam_date": exam.exam_date,
+            "subject_name": subject.subject_name,
+            "subject_display_name": subject.display_name or subject.subject_name,
+            "student_name": PrivacyService.display_name(normalized_name),
+            "student_key": normalized_name,
+            "score": mark.score,
+            "max_marks": mark.max_marks,
+            "percentage": percentage,
+            "absent_flag": mark.absent_flag,
+            "remarks": mark.remarks,
+        }
 
     def available_filters(self) -> dict[str, list[str]]:
         exam_stmt = select(
@@ -266,6 +313,19 @@ class MarkRepository:
             "academic_years": sorted({row.academic_year for row in rows if row.academic_year}),
             "classes": sorted({row.class_name for row in student_rows if row.class_name}),
             "sections": sorted({row.section for row in student_rows if row.section}),
+            "students": [
+                {
+                    "value": student_name,
+                    "label": PrivacyService.display_name(student_name),
+                }
+                for student_name in sorted(
+                    {
+                        self.format_student_name(student.student_name)
+                        for student in self.db.scalars(select(Student)).all()
+                    }
+                )
+                if student_name
+            ],
             "exam_terms": [
                 {
                     "value": row.exam_term,

@@ -58,11 +58,12 @@ def test_anonymize_students_keeps_db_anonymous_and_reveals_names_in_memory():
     assert repo.list_marks()[0]["student_name"] == "Student 0001"
 
 
-def test_approval_requires_key_when_db_is_anonymized_and_maps_real_name_to_alias():
+def test_approval_requires_key_when_db_is_anonymized_and_maps_real_name_to_alias(monkeypatch):
     engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
     Base.metadata.create_all(bind=engine)
     session = sessionmaker(bind=engine)()
     repo = MarkRepository(session)
+    monkeypatch.setattr(PrivacyService, "privacy_enabled", staticmethod(lambda: True))
     repo.upsert_mark(
         MarkCreate(
             student_name="Svanik P",
