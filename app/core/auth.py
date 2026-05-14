@@ -2,6 +2,9 @@ import base64
 import json
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+from dotenv import dotenv_values
 
 from fastapi import HTTPException, Request, status
 
@@ -13,6 +16,7 @@ ROLE_CLAIM_TYPES = {
     "role",
     "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
 }
+LOCAL_ENV_PATH = Path(__file__).resolve().parents[2] / "local.env"
 
 
 @dataclass(frozen=True)
@@ -116,7 +120,11 @@ def _local_roles() -> set[str]:
     app_env = os.getenv("APP_ENV", "").strip().lower()
     if app_env != "local":
         return set()
-    local_role = os.getenv("LOCAL_DEV_ROLE", "").strip()
+    local_role = ""
+    if LOCAL_ENV_PATH.exists():
+        local_role = str(dotenv_values(LOCAL_ENV_PATH).get("LOCAL_DEV_ROLE", "")).strip()
+    if not local_role:
+        local_role = os.getenv("LOCAL_DEV_ROLE", "").strip()
     return {local_role} if local_role else set()
 
 

@@ -37,6 +37,7 @@
         <a href="/admin" class="nav-tab {% if request.url.path == '/admin' %}nav-tab-active{% else %}nav-tab-idle{% endif %}">Admin</a>
         <a href="/admin/privacy" class="nav-tab {% if request.url.path.startswith('/admin/privacy') %}nav-tab-active{% else %}nav-tab-idle{% endif %}">Privacy</a>
         {% endif %}
+        <a href="/.auth/logout" class="nav-tab nav-tab-idle">Sign out</a>
       </nav>
     </div>
   </header>
